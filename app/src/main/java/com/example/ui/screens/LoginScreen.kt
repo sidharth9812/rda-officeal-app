@@ -29,6 +29,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.R
 import com.example.auth.AuthState
 import com.example.auth.AuthViewModel
@@ -91,8 +92,8 @@ fun LoginScreen(authViewModel: AuthViewModel) {
                         .border(1.5.dp, BentoNavy.copy(alpha = 0.2f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.rda_academy_logo_1785683224405),
+                    AsyncImage(
+                        model = R.drawable.rda_academy_logo_1785683224405,
                         contentDescription = "Raghukul Defence Academy Logo",
                         modifier = Modifier
                             .fillMaxSize()

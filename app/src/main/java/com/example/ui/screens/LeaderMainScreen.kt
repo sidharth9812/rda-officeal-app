@@ -27,7 +27,7 @@ import com.example.model.*
 import com.example.repository.AcademyRepository
 import com.example.ui.components.*
 import com.example.ui.theme.*
-import java.time.LocalDate
+import com.example.util.DateUtils
 import java.util.Calendar
 
 @Composable
@@ -186,7 +186,7 @@ fun LeaderDashboardContent(
     developerInfo: DeveloperInfo = DeveloperInfo(),
     onNavigateTab: (Int) -> Unit = {}
 ) {
-    val today = LocalDate.now().toString()
+    val today = DateUtils.getTodayString()
     val todayGroupAtt = attendanceList.filter { it.groupId == assignedGroup?.groupId && it.date == today }
     val todayPresent = todayGroupAtt.count { it.status == AttendanceStatus.PRESENT }
     val todayAbsent = todayGroupAtt.count { it.status == AttendanceStatus.ABSENT }
@@ -343,7 +343,7 @@ fun LeaderAttendanceContent(
     repository: AcademyRepository
 ) {
     val context = LocalContext.current
-    var selectedDate by remember { mutableStateOf(LocalDate.now().toString()) }
+    var selectedDate by remember { mutableStateOf(DateUtils.getTodayString()) }
 
     // Map of studentId -> AttendanceStatus (PRESENT/ABSENT)
     val attendanceMap = remember { mutableStateMapOf<String, AttendanceStatus>() }
@@ -361,11 +361,8 @@ fun LeaderAttendanceContent(
     val datePickerDialog = DatePickerDialog(
         context,
         { _, year, month, dayOfMonth ->
-            val formattedMonth = (month + 1).toString().padStart(2, '0')
-            val formattedDay = dayOfMonth.toString().padStart(2, '0')
-            val pickedStr = "$year-$formattedMonth-$formattedDay"
-            val pickedDate = try { LocalDate.parse(pickedStr) } catch (e: Exception) { LocalDate.now() }
-            if (pickedDate.isAfter(LocalDate.now())) {
+            val pickedStr = DateUtils.formatDate(year, month, dayOfMonth)
+            if (DateUtils.isAfter(pickedStr, DateUtils.getTodayString())) {
                 Toast.makeText(context, "Attendance cannot be marked or viewed for future dates.", Toast.LENGTH_SHORT).show()
             } else {
                 selectedDate = pickedStr

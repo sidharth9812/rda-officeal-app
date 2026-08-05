@@ -10,8 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import com.example.util.DateUtils
 
 class AcademyRepository {
     private val firestore: FirebaseFirestore? by lazy {
@@ -225,9 +224,9 @@ class AcademyRepository {
             )
         )
 
-        val today = LocalDate.now().toString()
-        val yesterday = LocalDate.now().minusDays(1).toString()
-        val dayBefore = LocalDate.now().minusDays(2).toString()
+        val today = DateUtils.getTodayString(0)
+        val yesterday = DateUtils.getTodayString(-1)
+        val dayBefore = DateUtils.getTodayString(-2)
 
         val initialAttendance = listOf(
             AttendanceRecord("att_1", "STU_1001", "student_uid_301", "batch_mp_police_2026", "group_mp_a", today, AttendanceStatus.PRESENT, "leader_uid_201", "GROUP_LEADER"),
@@ -288,7 +287,7 @@ class AcademyRepository {
                 _isOffline.value = false
                 if (snapshot != null) {
                     val list = snapshot.documents.mapNotNull { it.toObject(Batch::class.java) }
-                    if (list.isNotEmpty() || _batches.value.isNotEmpty()) {
+                    if (list.isNotEmpty()) {
                         _batches.value = list
                     }
                 }
@@ -297,7 +296,7 @@ class AcademyRepository {
             fs.collection("groups").addSnapshotListener { snapshot, error ->
                 if (error == null && snapshot != null) {
                     val list = snapshot.documents.mapNotNull { it.toObject(Group::class.java) }
-                    if (list.isNotEmpty() || _groups.value.isNotEmpty()) {
+                    if (list.isNotEmpty()) {
                         _groups.value = list
                     }
                 }
@@ -306,7 +305,7 @@ class AcademyRepository {
             fs.collection("students").addSnapshotListener { snapshot, error ->
                 if (error == null && snapshot != null) {
                     val list = snapshot.documents.mapNotNull { it.toObject(Student::class.java) }
-                    if (list.isNotEmpty() || _students.value.isNotEmpty()) {
+                    if (list.isNotEmpty()) {
                         _students.value = list
                     }
                 }
@@ -315,7 +314,7 @@ class AcademyRepository {
             fs.collection("attendance").addSnapshotListener { snapshot, error ->
                 if (error == null && snapshot != null) {
                     val list = snapshot.documents.mapNotNull { it.toObject(AttendanceRecord::class.java) }
-                    if (list.isNotEmpty() || _attendance.value.isNotEmpty()) {
+                    if (list.isNotEmpty()) {
                         _attendance.value = list
                     }
                 }
@@ -324,7 +323,7 @@ class AcademyRepository {
             fs.collection("notices").addSnapshotListener { snapshot, error ->
                 if (error == null && snapshot != null) {
                     val list = snapshot.documents.mapNotNull { it.toObject(Notice::class.java) }
-                    if (list.isNotEmpty() || _notices.value.isNotEmpty()) {
+                    if (list.isNotEmpty()) {
                         _notices.value = list
                     }
                 }
@@ -333,7 +332,7 @@ class AcademyRepository {
             fs.collection("certificates").addSnapshotListener { snapshot, error ->
                 if (error == null && snapshot != null) {
                     val list = snapshot.documents.mapNotNull { it.toObject(Certificate::class.java) }
-                    if (list.isNotEmpty() || _certificates.value.isNotEmpty()) {
+                    if (list.isNotEmpty()) {
                         _certificates.value = list
                     }
                 }
@@ -342,7 +341,7 @@ class AcademyRepository {
             fs.collection("gallery").addSnapshotListener { snapshot, error ->
                 if (error == null && snapshot != null) {
                     val list = snapshot.documents.mapNotNull { it.toObject(GalleryItem::class.java) }
-                    if (list.isNotEmpty() || _gallery.value.isNotEmpty()) {
+                    if (list.isNotEmpty()) {
                         _gallery.value = list
                     }
                 }
@@ -351,7 +350,7 @@ class AcademyRepository {
             fs.collection("achievements").addSnapshotListener { snapshot, error ->
                 if (error == null && snapshot != null) {
                     val list = snapshot.documents.mapNotNull { it.toObject(AchievementItem::class.java) }
-                    if (list.isNotEmpty() || _achievements.value.isNotEmpty()) {
+                    if (list.isNotEmpty()) {
                         _achievements.value = list
                     }
                 }

@@ -6,9 +6,13 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
+import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.example.BuildConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -18,224 +22,254 @@ import java.io.FileOutputStream
 import java.io.InputStream
 import java.util.concurrent.TimeUnit
 
-data class ReleaseInfo(
-    val tagName: String,
-    val versionName: String,
-    val releaseTitle: String,
-    val releaseNotes: String,
-    val apkUrl: String,
-    val apkSizeMb: Double,
-    val publishedAt: String = ""
+data class GitHubReleaseInfo(
+    val version: String,
+    val releaseName: String,
+    val body: String,
+    val downloadUrl: String,
+    val apkSizeFormatted: String,
+    val publishedAt: String
 )
 
-sealed class UpdateDownloadState {
-    object Idle : UpdateDownloadState()
-    data class Downloading(val progressPercent: Int, val bytesDownloaded: Long, val totalBytes: Long) : UpdateDownloadState()
-    data class ReadyToInstall(val apkFileUri: Uri, val apkFile: File) : UpdateDownloadState()
-    data class Error(val message: String) : UpdateDownloadState()
+sealed class UpdateState {
+    object Idle : UpdateState()
+    object Checking : UpdateState()
+    data class UpdateAvailable(val release: GitHubReleaseInfo) : UpdateState()
+    data class Downloading(val progress: Int, val downloadedMb: String, val totalMb: String) : UpdateState()
+    data class ReadyToInstall(val apkFile: File) : UpdateState()
+    data class Error(val message: String) : UpdateState()
+    object UpToDate : UpdateState()
 }
 
 class GitHubUpdateManager(private val context: Context) {
 
+    private val _updateState = MutableStateFlow<UpdateState>(UpdateState.Idle)
+    val updateState: StateFlow<UpdateState> = _updateState.asStateFlow()
+
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
-        .followRedirects(true)
-        .followSslRedirects(true)
         .build()
 
-    private val repoOwner = "sidharth9812"
-    private val repoName = "rda-officeal-app"
-    private val latestReleaseUrl = "https://api.github.com/repos/$repoOwner/$repoName/releases/latest"
+    companion object {
+        private const val GITHUB_API_URL = "https://api.github.com/repos/sidharth9812/rda-officeal-app/releases/latest"
+        private const val TAG = "GitHubUpdateManager"
+    }
 
-    suspend fun checkForUpdate(): Result<ReleaseInfo?> = withContext(Dispatchers.IO) {
-        try {
-            val request = Request.Builder()
-                .url(latestReleaseUrl)
-                .header("User-Agent", "RDA-Academy-Android-App")
-                .header("Accept", "application/vnd.github.v3+json")
-                .build()
-
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    if (response.code == 404) {
-                        Log.i("GitHubUpdateManager", "No releases found on GitHub repo yet.")
-                        return@withContext Result.success(null)
-                    }
-                    return@withContext Result.failure(Exception("GitHub API error code: ${response.code}"))
+    suspend fun checkForUpdates(silent: Boolean = false) {
+        withContext(Dispatchers.IO) {
+            try {
+                if (!silent) {
+                    _updateState.value = UpdateState.Checking
                 }
 
-                val bodyString = response.body?.string() ?: return@withContext Result.failure(Exception("Empty response body"))
-                val json = JSONObject(bodyString)
+                val request = Request.Builder()
+                    .url(GITHUB_API_URL)
+                    .header("Accept", "application/vnd.github+json")
+                    .build()
 
-                val tagName = json.optString("tag_name", "")
-                val releaseTitle = json.optString("name", tagName)
-                val releaseNotes = json.optString("body", "No release notes provided.")
+                val response = client.newCall(request).execute()
+                if (!response.isSuccessful) {
+                    val msg = "Server error ${response.code}"
+                    Log.w(TAG, msg)
+                    if (!silent) _updateState.value = UpdateState.Error(msg)
+                    return@withContext
+                }
+
+                val jsonStr = response.body?.string() ?: ""
+                if (jsonStr.isBlank()) {
+                    if (!silent) _updateState.value = UpdateState.UpToDate
+                    return@withContext
+                }
+
+                val json = JSONObject(jsonStr)
+                val tagName = json.optString("tag_name", "").trim()
+                val name = json.optString("name", "New RDA Release").ifBlank { "New RDA Release" }
+                val body = json.optString("body", "Bug fixes and performance improvements.").ifBlank { "Bug fixes and performance improvements." }
                 val publishedAt = json.optString("published_at", "")
 
-                val cleanVersion = tagName.trimStart('v', 'V')
-                val currentVersion = BuildConfig.VERSION_NAME
-
-                val assets = json.optJSONArray("assets") ?: return@withContext Result.success(null)
+                // Find APK asset in assets array
                 var apkUrl = ""
                 var apkSizeBytes = 0L
-
-                for (i in 0 until assets.length()) {
-                    val asset = assets.getJSONObject(i)
-                    val assetName = asset.optString("name", "")
-                    if (assetName.endsWith(".apk", ignoreCase = true)) {
-                        apkUrl = asset.optString("browser_download_url", "")
-                        apkSizeBytes = asset.optLong("size", 0L)
-                        break
+                val assets = json.optJSONArray("assets")
+                if (assets != null) {
+                    for (i in 0 until assets.length()) {
+                        val asset = assets.getJSONObject(i)
+                        val downloadUrl = asset.optString("browser_download_url", "")
+                        val assetName = asset.optString("name", "")
+                        if (assetName.endsWith(".apk") || downloadUrl.endsWith(".apk")) {
+                            apkUrl = downloadUrl
+                            apkSizeBytes = asset.optLong("size", 0L)
+                            break
+                        }
                     }
                 }
 
+                // Fallback to tarball or direct download url if asset not explicitly found
                 if (apkUrl.isBlank()) {
-                    Log.i("GitHubUpdateManager", "Latest release found but no .apk asset attached.")
-                    return@withContext Result.success(null)
+                    apkUrl = json.optString("html_url", "")
                 }
 
-                val isNewer = isVersionNewer(cleanVersion, currentVersion)
-                if (isNewer) {
-                    val sizeMb = if (apkSizeBytes > 0) apkSizeBytes.toDouble() / (1024 * 1024) else 0.0
-                    val info = ReleaseInfo(
-                        tagName = tagName,
-                        versionName = cleanVersion,
-                        releaseTitle = releaseTitle,
-                        releaseNotes = releaseNotes,
-                        apkUrl = apkUrl,
-                        apkSizeMb = sizeMb,
+                val currentVersion = BuildConfig.VERSION_NAME
+
+                if (isNewerVersion(currentVersion, tagName)) {
+                    val sizeMbStr = if (apkSizeBytes > 0) {
+                        String.format("%.1f MB", apkSizeBytes / (1024.0 * 1024.0))
+                    } else {
+                        "Approx 15 MB"
+                    }
+
+                    val releaseInfo = GitHubReleaseInfo(
+                        version = tagName,
+                        releaseName = name,
+                        body = body,
+                        downloadUrl = apkUrl,
+                        apkSizeFormatted = sizeMbStr,
                         publishedAt = publishedAt
                     )
-                    Result.success(info)
+                    _updateState.value = UpdateState.UpdateAvailable(releaseInfo)
                 } else {
-                    Result.success(null)
+                    if (!silent) {
+                        _updateState.value = UpdateState.UpToDate
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Check update error: ${e.message}", e)
+                if (!silent) {
+                    _updateState.value = UpdateState.Error(e.localizedMessage ?: "Failed to check updates")
                 }
             }
-        } catch (e: Exception) {
-            Log.e("GitHubUpdateManager", "Failed to check update: ${e.message}", e)
-            Result.failure(e)
         }
     }
 
-    suspend fun downloadApk(
-        apkUrl: String,
-        versionName: String,
-        onProgress: (UpdateDownloadState) -> Unit
-    ) = withContext(Dispatchers.IO) {
+    private fun isNewerVersion(currentVersion: String, latestTag: String): Boolean {
         try {
-            onProgress(UpdateDownloadState.Downloading(0, 0, 0))
+            val cleanCurrent = currentVersion.replace("v", "").replace("V", "").trim()
+            val cleanLatest = latestTag.replace("v", "").replace("V", "").trim()
 
-            val downloadDir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS) ?: context.cacheDir
-            if (!downloadDir.exists()) downloadDir.mkdirs()
+            if (cleanCurrent == cleanLatest) return false
 
-            val apkFile = File(downloadDir, "rda_academy_v${versionName}.apk")
-            if (apkFile.exists()) {
-                apkFile.delete()
+            val currentParts = cleanCurrent.split(".").mapNotNull { it.toIntOrNull() }
+            val latestParts = cleanLatest.split(".").mapNotNull { it.toIntOrNull() }
+
+            val length = maxOf(currentParts.size, latestParts.size)
+            for (i in 0 until length) {
+                val currentPart = currentParts.getOrElse(i) { 0 }
+                val latestPart = latestParts.getOrElse(i) { 0 }
+
+                if (latestPart > currentPart) return true
+                if (latestPart < currentPart) return false
             }
+        } catch (e: Exception) {
+            Log.w(TAG, "Version comparison error: ${e.message}")
+        }
+        return false
+    }
 
-            val request = Request.Builder()
-                .url(apkUrl)
-                .header("User-Agent", "RDA-Academy-Android-App")
-                .build()
+    suspend fun downloadAndInstallApk(release: GitHubReleaseInfo) {
+        withContext(Dispatchers.IO) {
+            try {
+                _updateState.value = UpdateState.Downloading(0, "0 MB", release.apkSizeFormatted)
 
-            client.newCall(request).execute().use { response ->
+                val request = Request.Builder()
+                    .url(release.downloadUrl)
+                    .build()
+
+                val response = client.newCall(request).execute()
                 if (!response.isSuccessful) {
-                    onProgress(UpdateDownloadState.Error("HTTP error during download: ${response.code}"))
+                    _updateState.value = UpdateState.Error("Download failed with HTTP ${response.code}")
                     return@withContext
                 }
 
-                val body = response.body ?: run {
-                    onProgress(UpdateDownloadState.Error("Download body was empty"))
+                val body = response.body
+                if (body == null) {
+                    _updateState.value = UpdateState.Error("Empty download response body")
                     return@withContext
                 }
 
-                val totalBytes = body.contentLength()
-                var bytesDownloaded = 0L
+                val contentLength = body.contentLength()
+                val apkFile = File(context.cacheDir, "rda_update.apk")
+                if (apkFile.exists()) apkFile.delete()
 
                 val inputStream: InputStream = body.byteStream()
                 val outputStream = FileOutputStream(apkFile)
 
                 val buffer = ByteArray(8192)
                 var bytesRead: Int
+                var totalBytesRead = 0L
 
                 while (inputStream.read(buffer).also { bytesRead = it } != -1) {
                     outputStream.write(buffer, 0, bytesRead)
-                    bytesDownloaded += bytesRead
+                    totalBytesRead += bytesRead
 
-                    val percent = if (totalBytes > 0) ((bytesDownloaded * 100) / totalBytes).toInt() else -1
-                    onProgress(UpdateDownloadState.Downloading(percent, bytesDownloaded, totalBytes))
+                    val progress = if (contentLength > 0) {
+                        ((totalBytesRead * 100) / contentLength).toInt()
+                    } else {
+                        50
+                    }
+
+                    val downloadedMb = String.format("%.1f MB", totalBytesRead / (1024.0 * 1024.0))
+                    val totalMb = if (contentLength > 0) String.format("%.1f MB", contentLength / (1024.0 * 1024.0)) else release.apkSizeFormatted
+
+                    _updateState.value = UpdateState.Downloading(progress, downloadedMb, totalMb)
                 }
 
                 outputStream.flush()
                 outputStream.close()
                 inputStream.close()
 
-                val apkUri = FileProvider.getUriForFile(
-                    context,
-                    "${context.packageName}.fileprovider",
-                    apkFile
-                )
+                _updateState.value = UpdateState.ReadyToInstall(apkFile)
 
-                onProgress(UpdateDownloadState.ReadyToInstall(apkUri, apkFile))
-            }
-        } catch (e: Exception) {
-            Log.e("GitHubUpdateManager", "Download error: ${e.message}", e)
-            onProgress(UpdateDownloadState.Error(e.localizedMessage ?: "Download failed. Check network connection."))
-        }
-    }
-
-    fun canInstallUnknownApps(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.packageManager.canRequestPackageInstalls()
-        } else {
-            true
-        }
-    }
-
-    fun promptUnknownAppsPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            try {
-                val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-                    data = Uri.parse("package:${context.packageName}")
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                withContext(Dispatchers.Main) {
+                    installApk(apkFile)
                 }
-                context.startActivity(intent)
             } catch (e: Exception) {
-                Log.e("GitHubUpdateManager", "Unable to open Unknown App Sources settings: ${e.message}")
+                Log.e(TAG, "Download error: ${e.message}", e)
+                _updateState.value = UpdateState.Error("Download failed: ${e.localizedMessage}")
             }
         }
     }
 
-    fun installApk(apkUri: Uri) {
+    fun installApk(apkFile: File) {
         try {
+            if (!apkFile.exists()) {
+                Toast.makeText(context, "Update APK file not found", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (!context.packageManager.canRequestPackageInstalls()) {
+                    val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                    Toast.makeText(context, "Please allow unknown app installation and try again", Toast.LENGTH_LONG).show()
+                    return
+                }
+            }
+
+            val apkUri: Uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                apkFile
+            )
+
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(apkUri, "application/vnd.android.package-archive")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
+
             context.startActivity(intent)
         } catch (e: Exception) {
-            Log.e("GitHubUpdateManager", "Failed to launch package installer: ${e.message}", e)
+            Log.e(TAG, "Install failed: ${e.message}", e)
+            Toast.makeText(context, "Failed to launch installer: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
-    private fun isVersionNewer(latest: String, current: String): Boolean {
-        try {
-            val latestParts = latest.split(".").mapNotNull { it.toIntOrNull() }
-            val currentParts = current.split(".").mapNotNull { it.toIntOrNull() }
-
-            val maxLen = maxOf(latestParts.size, currentParts.size)
-            for (i in 0 until maxLen) {
-                val l = latestParts.getOrElse(i) { 0 }
-                val c = currentParts.getOrElse(i) { 0 }
-                if (l > c) return true
-                if (l < c) return false
-            }
-            return false
-        } catch (e: Exception) {
-            return latest != current
-        }
+    fun dismissUpdate() {
+        _updateState.value = UpdateState.Idle
     }
 }

@@ -33,8 +33,10 @@ import com.example.pdf.PdfReportGenerator
 import com.example.repository.AcademyRepository
 import com.example.ui.components.*
 import com.example.ui.theme.*
-import java.time.LocalDate
+import com.example.util.DateUtils
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Locale
 
 @Composable
 fun AdminMainScreen(
@@ -153,7 +155,7 @@ fun AdminDashboardContent(
     val activeStudents = students.count { it.status == "ACTIVE" }
     val activeBatches = batches.count { it.status == "ACTIVE" }
 
-    val today = LocalDate.now().toString()
+    val today = DateUtils.getTodayString()
     val todayRecords = attendanceList.filter { it.date == today }
     val todayPresent = todayRecords.count { it.status == AttendanceStatus.PRESENT }
     val todayAbsent = todayRecords.count { it.status == AttendanceStatus.ABSENT }
@@ -420,7 +422,7 @@ fun AdminBatchesContent(
         var name by remember { mutableStateOf("") }
         var type by remember { mutableStateOf("MP Police") }
         var schedule by remember { mutableStateOf("Mon - Sat (5:30 AM - 8:30 AM)") }
-        var startDate by remember { mutableStateOf(LocalDate.now().toString()) }
+        var startDate by remember { mutableStateOf(DateUtils.getTodayString()) }
         var description by remember { mutableStateOf("") }
 
         AlertDialog(
@@ -3308,9 +3310,9 @@ fun AdminAttendanceContent(
     }
 
     // 2. Calendar Month and Date Selection State
-    var selectedYearMonth by remember { mutableStateOf(java.time.YearMonth.now()) }
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
-    val selectedDateString = selectedDate.toString() // YYYY-MM-DD
+    val todayStr = DateUtils.getTodayString()
+    var selectedCalendar by remember { mutableStateOf(Calendar.getInstance()) }
+    var selectedDateString by remember { mutableStateOf(todayStr) }
 
     // Student search within batch
     var searchQuery by remember { mutableStateOf("") }
@@ -3439,12 +3441,17 @@ fun AdminAttendanceContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(
-                            onClick = { selectedYearMonth = selectedYearMonth.minusMonths(1) }
+                            onClick = {
+                                val prev = selectedCalendar.clone() as Calendar
+                                prev.add(Calendar.MONTH, -1)
+                                selectedCalendar = prev
+                            }
                         ) {
                             Icon(Icons.Default.ChevronLeft, contentDescription = "Previous Month", tint = BentoNavy)
                         }
 
-                        val monthTitle = selectedYearMonth.format(java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy"))
+                        val monthFormat = SimpleDateFormat("MMMM yyyy", Locale.US)
+                        val monthTitle = monthFormat.format(selectedCalendar.time)
                         Text(
                             text = monthTitle.uppercase(),
                             fontSize = 15.sp,
@@ -3455,8 +3462,8 @@ fun AdminAttendanceContent(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             TextButton(
                                 onClick = {
-                                    selectedYearMonth = java.time.YearMonth.now()
-                                    selectedDate = LocalDate.now()
+                                    selectedCalendar = Calendar.getInstance()
+                                    selectedDateString = todayStr
                                 },
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                             ) {
@@ -3465,16 +3472,15 @@ fun AdminAttendanceContent(
 
                             IconButton(
                                 onClick = {
-                                    if (selectedYearMonth.isBefore(java.time.YearMonth.now())) {
-                                        selectedYearMonth = selectedYearMonth.plusMonths(1)
-                                    }
-                                },
-                                enabled = selectedYearMonth.isBefore(java.time.YearMonth.now())
+                                    val next = selectedCalendar.clone() as Calendar
+                                    next.add(Calendar.MONTH, 1)
+                                    selectedCalendar = next
+                                }
                             ) {
                                 Icon(
                                     Icons.Default.ChevronRight,
                                     contentDescription = "Next Month",
-                                    tint = if (selectedYearMonth.isBefore(java.time.YearMonth.now())) BentoNavy else TextMuted.copy(alpha = 0.3f)
+                                    tint = BentoNavy
                                 )
                             }
                         }
@@ -3505,9 +3511,11 @@ fun AdminAttendanceContent(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     // Calendar Days Grid
-                    val firstDayOfMonth = selectedYearMonth.atDay(1)
-                    val daysInMonth = selectedYearMonth.lengthOfMonth()
-                    val startOffset = firstDayOfMonth.dayOfWeek.value - 1 // 0 for Mon, 6 for Sun
+                    val calCopy = selectedCalendar.clone() as Calendar
+                    calCopy.set(Calendar.DAY_OF_MONTH, 1)
+                    val daysInMonth = calCopy.getActualMaximum(Calendar.DAY_OF_MONTH)
+                    val firstDayOfWeek = calCopy.get(Calendar.DAY_OF_WEEK)
+                    val startOffset = if (firstDayOfWeek == Calendar.SUNDAY) 6 else firstDayOfWeek - 2
 
                     val totalSlots = startOffset + daysInMonth
                     val rows = (totalSlots + 6) / 7
@@ -3523,17 +3531,20 @@ fun AdminAttendanceContent(
                                     val dayNum = index - startOffset + 1
 
                                     if (dayNum in 1..daysInMonth) {
-                                        val dayDate = selectedYearMonth.atDay(dayNum)
-                                        val dayDateStr = dayDate.toString()
-                                        val isSelectedDay = dayDate == selectedDate
-                                        val isToday = dayDate == LocalDate.now()
+                                        val dayDateStr = DateUtils.formatDate(
+                                            calCopy.get(Calendar.YEAR),
+                                            calCopy.get(Calendar.MONTH),
+                                            dayNum
+                                        )
+                                        val isSelectedDay = dayDateStr == selectedDateString
+                                        val isToday = dayDateStr == todayStr
 
                                         // Check if attendance exists for this day in selected batch
                                         val hasAttendanceRecords = attendanceList.any { att ->
                                             att.date == dayDateStr && batchStudents.any { st -> st.studentId == att.studentId }
                                         }
 
-                                        val isFutureDay = dayDate.isAfter(LocalDate.now())
+                                        val isFutureDay = DateUtils.isAfter(dayDateStr, todayStr)
 
                                         val cellBg = when {
                                             isSelectedDay -> BentoNavy
@@ -3565,7 +3576,7 @@ fun AdminAttendanceContent(
                                                     if (isFutureDay) {
                                                         Toast.makeText(context, "Attendance cannot be marked or viewed for future dates.", Toast.LENGTH_SHORT).show()
                                                     } else {
-                                                        selectedDate = dayDate
+                                                        selectedDateString = dayDateStr
                                                     }
                                                 },
                                             contentAlignment = Alignment.Center
@@ -3607,7 +3618,7 @@ fun AdminAttendanceContent(
 
         // --- 3. ATTENDANCE METRICS FOR SELECTED DATE ---
         item {
-            val formattedSelectedDate = selectedDate.format(java.time.format.DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy"))
+            val formattedSelectedDate = selectedDateString
             val percentage = if (totalInBatch > 0) (presentCount.toFloat() / totalInBatch * 100).toInt() else 0
 
             Card(
@@ -3660,7 +3671,7 @@ fun AdminAttendanceContent(
                     ) {
                         Button(
                             onClick = {
-                                if (selectedDate.isAfter(LocalDate.now())) {
+                                if (DateUtils.isAfter(selectedDateString, DateUtils.getTodayString())) {
                                     Toast.makeText(context, "Attendance cannot be marked or viewed for future dates.", Toast.LENGTH_SHORT).show()
                                     return@Button
                                 }
@@ -3691,7 +3702,7 @@ fun AdminAttendanceContent(
 
                         Button(
                             onClick = {
-                                if (selectedDate.isAfter(LocalDate.now())) {
+                                if (DateUtils.isAfter(selectedDateString, DateUtils.getTodayString())) {
                                     Toast.makeText(context, "Attendance cannot be marked or viewed for future dates.", Toast.LENGTH_SHORT).show()
                                     return@Button
                                 }
@@ -3830,7 +3841,7 @@ fun AdminAttendanceContent(
                             FilterChip(
                                 selected = currentStatus == AttendanceStatus.PRESENT,
                                 onClick = {
-                                    if (selectedDate.isAfter(LocalDate.now())) {
+                                    if (DateUtils.isAfter(selectedDateString, DateUtils.getTodayString())) {
                                         Toast.makeText(context, "Attendance cannot be marked or viewed for future dates.", Toast.LENGTH_SHORT).show()
                                         return@FilterChip
                                     }
@@ -3858,7 +3869,7 @@ fun AdminAttendanceContent(
                             FilterChip(
                                 selected = currentStatus == AttendanceStatus.ABSENT,
                                 onClick = {
-                                    if (selectedDate.isAfter(LocalDate.now())) {
+                                    if (DateUtils.isAfter(selectedDateString, DateUtils.getTodayString())) {
                                         Toast.makeText(context, "Attendance cannot be marked or viewed for future dates.", Toast.LENGTH_SHORT).show()
                                         return@FilterChip
                                     }
@@ -4058,7 +4069,7 @@ fun AdminReportsContent(
                         reportTitle = selectedReportType.replace("_", " "),
                         batchName = batchName,
                         groupName = groupName,
-                        dateRangeText = "Current Session (${LocalDate.now()})",
+                        dateRangeText = "Current Session (${DateUtils.getTodayString()})",
                         students = students,
                         attendanceList = attendanceList
                     )

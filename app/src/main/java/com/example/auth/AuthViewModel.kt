@@ -53,21 +53,23 @@ class AuthViewModel(
                         (it.uid.isNotBlank() && it.uid == currentStudent.uid) ||
                         (it.studentId.isNotBlank() && it.studentId == currentStudent.studentId)
                     }
-                    if (updatedStudent == null) {
+                    if (updatedStudent != null) {
+                        if (updatedStudent.isBlocked) {
+                            clearSession()
+                            _authState.value = AuthState.Error("Your student account has been BLOCKED by the Administrator.")
+                        } else if (updatedStudent != currentStudent) {
+                            val newRole = if (updatedStudent.isLeader) UserRole.GROUP_LEADER else currentState.user.role
+                            val updatedUser = currentState.user.copy(
+                                photoUrl = updatedStudent.photoUrl.ifBlank { currentState.user.photoUrl },
+                                name = updatedStudent.name.ifBlank { currentState.user.name },
+                                role = newRole
+                            )
+                            saveSession(updatedUser, updatedStudent)
+                            _authState.value = AuthState.Authenticated(updatedUser, updatedStudent)
+                        }
+                    } else if (studentList.isNotEmpty()) {
                         clearSession()
                         _authState.value = AuthState.Error("Your student account was deleted by the Administrator.")
-                    } else if (updatedStudent.isBlocked) {
-                        clearSession()
-                        _authState.value = AuthState.Error("Your student account has been BLOCKED by the Administrator.")
-                    } else if (updatedStudent != currentStudent) {
-                        val newRole = if (updatedStudent.isLeader) UserRole.GROUP_LEADER else currentState.user.role
-                        val updatedUser = currentState.user.copy(
-                            photoUrl = updatedStudent.photoUrl.ifBlank { currentState.user.photoUrl },
-                            name = updatedStudent.name.ifBlank { currentState.user.name },
-                            role = newRole
-                        )
-                        saveSession(updatedUser, updatedStudent)
-                        _authState.value = AuthState.Authenticated(updatedUser, updatedStudent)
                     }
                 }
             }
@@ -190,10 +192,20 @@ class AuthViewModel(
     }
 
     fun checkCurrentUser() {
+        val savedSession = getSavedSession()
+        if (savedSession != null) {
+            val (savedUser, savedStudent) = savedSession
+            if (savedStudent != null && !savedStudent.profileCompleted && savedUser.role == UserRole.STUDENT) {
+                _authState.value = AuthState.ProfileIncomplete(savedUser, savedStudent)
+            } else {
+                _authState.value = AuthState.Authenticated(savedUser, savedStudent)
+            }
+        }
+
         val fbUser = auth?.currentUser
         if (fbUser != null) {
             repository.fetchUserByUid(fbUser.uid) { userFromFs ->
-                val user = userFromFs ?: User(
+                val user = userFromFs ?: savedSession?.first ?: User(
                     uid = fbUser.uid,
                     email = fbUser.email ?: "",
                     role = UserRole.STUDENT,
@@ -201,7 +213,7 @@ class AuthViewModel(
                 )
                 resolveUserRoleAndProfile(user)
             }
-        } else {
+        } else if (savedSession == null) {
             clearSession()
             _authState.value = AuthState.Unauthenticated
         }

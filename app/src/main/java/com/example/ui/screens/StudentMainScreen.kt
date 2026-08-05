@@ -27,8 +27,7 @@ import com.example.model.*
 import com.example.repository.AcademyRepository
 import com.example.ui.components.*
 import com.example.ui.theme.*
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import com.example.util.DateUtils
 import java.util.Calendar
 
 @Composable
@@ -73,7 +72,7 @@ fun StudentMainScreen(
     val totalTrainingDays = studentAttendance.size
     val attendancePercentage = if (totalTrainingDays > 0) (presentCount.toFloat() / totalTrainingDays * 100).toInt() else 100
 
-    val todayStr = LocalDate.now().toString()
+    val todayStr = DateUtils.getTodayString()
     val todayRecord = studentAttendance.find { it.date == todayStr }
 
     // Relevant notices (ALL, Student Batch, Student Group)
@@ -345,23 +344,20 @@ fun StudentAttendanceContent(studentAttendance: List<AttendanceRecord>) {
     var selectedFilter by remember { mutableStateOf("ALL") } // ALL, THIS_WEEK, THIS_MONTH, THIS_YEAR, CUSTOM
 
     val filteredAttendance = remember(studentAttendance, selectedFilter) {
-        val now = LocalDate.now()
+        val today = DateUtils.getTodayString()
+        val yearMonthPrefix = if (today.length >= 7) today.substring(0, 7) else ""
+        val yearPrefix = if (today.length >= 4) today.substring(0, 4) else ""
+        val weekAgo = DateUtils.getTodayString(-7)
+
         when (selectedFilter) {
             "THIS_WEEK" -> {
-                val startOfWeek = now.minusDays(7)
-                studentAttendance.filter {
-                    try { LocalDate.parse(it.date) >= startOfWeek } catch (e: Exception) { true }
-                }
+                studentAttendance.filter { it.date >= weekAgo }
             }
             "THIS_MONTH" -> {
-                studentAttendance.filter {
-                    try { LocalDate.parse(it.date).month == now.month && LocalDate.parse(it.date).year == now.year } catch (e: Exception) { true }
-                }
+                studentAttendance.filter { yearMonthPrefix.isNotBlank() && it.date.startsWith(yearMonthPrefix) }
             }
             "THIS_YEAR" -> {
-                studentAttendance.filter {
-                    try { LocalDate.parse(it.date).year == now.year } catch (e: Exception) { true }
-                }
+                studentAttendance.filter { yearPrefix.isNotBlank() && it.date.startsWith(yearPrefix) }
             }
             else -> studentAttendance
         }

@@ -8,67 +8,68 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.example.MainActivity
+import com.example.R
 
 object NotificationHelper {
 
-    const val CHANNEL_UPDATES_ID = "rda_updates_channel"
-    const val CHANNEL_GENERAL_ID = "rda_general_channel"
+    const val CHANNEL_UPDATES_ID = "rda_app_updates"
+    const val CHANNEL_NOTICES_ID = "rda_academy_notices"
 
     fun createNotificationChannels(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-                ?: return
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
             val updatesChannel = NotificationChannel(
                 CHANNEL_UPDATES_ID,
                 "App Updates",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Notifications for new RDA Academy app releases and updates"
+                description = "Notifications for RDA Physical Academy app updates"
                 enableVibration(true)
             }
 
-            val generalChannel = NotificationChannel(
-                CHANNEL_GENERAL_ID,
-                "General Notices & Announcements",
-                NotificationManager.IMPORTANCE_DEFAULT
+            val noticesChannel = NotificationChannel(
+                CHANNEL_NOTICES_ID,
+                "Academy Notices",
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "General announcements, notices, and class updates"
+                description = "Important notices and batch announcements"
+                enableVibration(true)
             }
 
             notificationManager.createNotificationChannel(updatesChannel)
-            notificationManager.createNotificationChannel(generalChannel)
+            notificationManager.createNotificationChannel(noticesChannel)
         }
     }
 
-    fun showUpdateNotification(context: Context, title: String, body: String) {
+    fun showUpdateNotification(context: Context, version: String, notes: String) {
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("SHOW_UPDATE_DIALOG", true)
+            putExtra("EXTRA_SHOW_UPDATE", true)
         }
 
         val pendingIntent = PendingIntent.getActivity(
             context,
             1001,
             intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val notification = NotificationCompat.Builder(context, CHANNEL_UPDATES_ID)
-            .setSmallIcon(android.R.drawable.stat_sys_download_done)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle("New Update Available ($version)")
+            .setContentText("Tap to update RDA Physical Academy App: $notes")
+            .setStyle(NotificationCompat.BigTextStyle().bigText("Version $version is available for download:\n$notes"))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .build()
 
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-        notificationManager?.notify(2001, notification)
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(1001, notification)
     }
 
-    fun showGeneralNotification(context: Context, title: String, body: String) {
+    fun showNoticeNotification(context: Context, title: String, message: String) {
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
@@ -77,20 +78,20 @@ object NotificationHelper {
             context,
             1002,
             intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_GENERAL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+        val notification = NotificationCompat.Builder(context, CHANNEL_NOTICES_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
-            .setContentText(body)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .build()
 
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-        notificationManager?.notify(System.currentTimeMillis().toInt(), notification)
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(System.currentTimeMillis().toInt(), notification)
     }
 }

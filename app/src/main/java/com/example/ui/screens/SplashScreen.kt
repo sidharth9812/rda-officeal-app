@@ -20,6 +20,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.R
 import com.example.ui.theme.*
 import kotlinx.coroutines.delay
@@ -61,8 +62,8 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
                     .border(2.dp, BentoNavy.copy(alpha = 0.3f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.rda_academy_logo_1785683224405),
+                AsyncImage(
+                    model = R.drawable.rda_academy_logo_1785683224405,
                     contentDescription = "Raghukul Defence Academy Logo",
                     modifier = Modifier
                         .fillMaxSize()
@@ -110,8 +111,8 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
                         .background(CyberSurfaceVariant)
                         .border(1.5.dp, BentoNavy, CircleShape)
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.dev_photo),
+                    AsyncImage(
+                        model = R.drawable.dev_photo,
                         contentDescription = "Developer Sidharth Malviya",
                         modifier = Modifier
                             .fillMaxSize()

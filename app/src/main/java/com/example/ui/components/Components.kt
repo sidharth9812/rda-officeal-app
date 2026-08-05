@@ -1064,25 +1064,19 @@ fun DeveloperCard(
                     .border(2.5.dp, BentoNavy, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                if (developerInfo.photoUrl.startsWith("http://") || developerInfo.photoUrl.startsWith("https://") || developerInfo.photoUrl.startsWith("content://") || developerInfo.photoUrl.startsWith("file://")) {
-                    AsyncImage(
-                        model = developerInfo.photoUrl,
-                        contentDescription = "Developer ${developerInfo.name}",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
+                val photoModel: Any = if (developerInfo.photoUrl.startsWith("http://") || developerInfo.photoUrl.startsWith("https://") || developerInfo.photoUrl.startsWith("content://") || developerInfo.photoUrl.startsWith("file://")) {
+                    developerInfo.photoUrl
                 } else {
-                    Image(
-                        painter = painterResource(id = R.drawable.dev_photo),
-                        contentDescription = "Developer ${developerInfo.name}",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
+                    R.drawable.dev_photo
                 }
+                AsyncImage(
+                    model = photoModel,
+                    contentDescription = "Developer ${developerInfo.name}",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
             }
 
             Spacer(modifier = Modifier.height(10.dp))
