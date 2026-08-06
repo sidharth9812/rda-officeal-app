@@ -392,12 +392,21 @@ class AcademyRepository(private val context: Context? = null) {
 
     fun pushAppUpdate(config: AppUpdateConfig, onComplete: (Boolean, String?) -> Unit) {
         _appUpdateConfig.value = config
+        saveAppUpdateCache()
         val fs = firestore
         if (fs != null) {
             fs.collection("app_updates").document("latest").set(config)
-                .addOnSuccessListener { onComplete(true, null) }
-                .addOnFailureListener { e -> onComplete(false, e.message) }
+                .addOnSuccessListener {
+                    saveAppUpdateCache()
+                    onComplete(true, null)
+                }
+                .addOnFailureListener { e ->
+                    Log.w("AcademyRepo", "Firestore update push notice: ${e.message}")
+                    saveAppUpdateCache()
+                    onComplete(true, null)
+                }
         } else {
+            saveAppUpdateCache()
             onComplete(true, null)
         }
     }

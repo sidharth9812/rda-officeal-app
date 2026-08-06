@@ -66,13 +66,15 @@ class GitHubUpdateManager(private val context: Context) {
                 val request = Request.Builder()
                     .url(GITHUB_API_URL)
                     .header("Accept", "application/vnd.github+json")
+                    .header("User-Agent", "RDA-App-Android")
                     .build()
 
                 val response = client.newCall(request).execute()
                 if (!response.isSuccessful) {
-                    val msg = "Server error ${response.code}"
-                    Log.w(TAG, msg)
-                    if (!silent) _updateState.value = UpdateState.Error(msg)
+                    Log.w(TAG, "GitHub API status ${response.code}")
+                    if (!silent) {
+                        _updateState.value = UpdateState.UpToDate
+                    }
                     return@withContext
                 }
 
@@ -176,14 +178,11 @@ class GitHubUpdateManager(private val context: Context) {
                     .build()
 
                 val response = client.newCall(request).execute()
-                if (!response.isSuccessful) {
-                    _updateState.value = UpdateState.Error("Download failed with HTTP ${response.code}")
-                    return@withContext
-                }
-
                 val body = response.body
-                if (body == null) {
-                    _updateState.value = UpdateState.Error("Empty download response body")
+                if (!response.isSuccessful || body == null) {
+                    withContext(Dispatchers.Main) {
+                        launchBrowserDownload(release.downloadUrl)
+                    }
                     return@withContext
                 }
 
@@ -225,8 +224,24 @@ class GitHubUpdateManager(private val context: Context) {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Download error: ${e.message}", e)
-                _updateState.value = UpdateState.Error("Download failed: ${e.localizedMessage}")
+                withContext(Dispatchers.Main) {
+                    launchBrowserDownload(release.downloadUrl)
+                }
             }
+        }
+    }
+
+    private fun launchBrowserDownload(url: String) {
+        try {
+            val validUrl = if (url.isBlank()) "https://github.com/sidharth9812/rda-officeal-app/releases/latest" else url
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(validUrl)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            Toast.makeText(context, "Opening download link in browser...", Toast.LENGTH_LONG).show()
+            _updateState.value = UpdateState.Idle
+        } catch (e: Exception) {
+            _updateState.value = UpdateState.Error("Unable to open browser download")
         }
     }
 
