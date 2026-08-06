@@ -165,7 +165,7 @@ data class AppUpdateConfig(
     val versionName: String = "1.0.0",
     val title: String = "New App Update Available",
     val releaseNotes: String = "New features, performance enhancements & bug fixes.",
-    val downloadUrl: String = "https://github.com/sidharth9812/rda-officeal-app/releases/latest",
+    val downloadUrl: String = "https://github.com/sidharth9812/rda-officeal-app",
     val isMandatory: Boolean = false,
     val active: Boolean = true,
     val pushedByAdmin: String = "Academy Admin",

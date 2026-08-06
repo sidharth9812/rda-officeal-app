@@ -168,20 +168,56 @@ class GitHubUpdateManager(private val context: Context) {
         return false
     }
 
+    private fun isApkFileValid(file: File): Boolean {
+        if (!file.exists() || file.length() < 100_000) return false
+        return try {
+            java.io.FileInputStream(file).use { fis ->
+                val header = ByteArray(2)
+                val count = fis.read(header)
+                count == 2 && header[0] == 0x50.toByte() && header[1] == 0x4B.toByte()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Error validating APK file: ${e.message}")
+            false
+        }
+    }
+
     suspend fun downloadAndInstallApk(release: GitHubReleaseInfo) {
         withContext(Dispatchers.IO) {
             try {
+                val url = release.downloadUrl.trim()
+                val isDirectApk = url.lowercase().endsWith(".apk") || url.lowercase().contains(".apk?")
+
+                if (!isDirectApk) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Direct APK file link not available. Opening download page in browser...", Toast.LENGTH_LONG).show()
+                        launchBrowserDownload(url)
+                    }
+                    return@withContext
+                }
+
                 _updateState.value = UpdateState.Downloading(0, "0 MB", release.apkSizeFormatted)
 
                 val request = Request.Builder()
-                    .url(release.downloadUrl)
+                    .url(url)
+                    .header("User-Agent", "RDA-App-Android")
                     .build()
 
                 val response = client.newCall(request).execute()
                 val body = response.body
                 if (!response.isSuccessful || body == null) {
                     withContext(Dispatchers.Main) {
-                        launchBrowserDownload(release.downloadUrl)
+                        Toast.makeText(context, "Download failed (HTTP ${response.code}). Opening browser...", Toast.LENGTH_SHORT).show()
+                        launchBrowserDownload(url)
+                    }
+                    return@withContext
+                }
+
+                val contentType = response.header("Content-Type", "") ?: ""
+                if (contentType.contains("text/html")) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Link redirected to web page. Opening browser download...", Toast.LENGTH_LONG).show()
+                        launchBrowserDownload(url)
                     }
                     return@withContext
                 }
@@ -217,6 +253,15 @@ class GitHubUpdateManager(private val context: Context) {
                 outputStream.close()
                 inputStream.close()
 
+                if (!isApkFileValid(apkFile)) {
+                    Log.w(TAG, "Downloaded file is not a valid APK package.")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Downloaded file is not a valid APK. Opening browser...", Toast.LENGTH_LONG).show()
+                        launchBrowserDownload(url)
+                    }
+                    return@withContext
+                }
+
                 _updateState.value = UpdateState.ReadyToInstall(apkFile)
 
                 withContext(Dispatchers.Main) {
@@ -231,17 +276,20 @@ class GitHubUpdateManager(private val context: Context) {
         }
     }
 
-    private fun launchBrowserDownload(url: String) {
+    fun launchBrowserDownload(url: String) {
         try {
-            val validUrl = if (url.isBlank()) "https://github.com/sidharth9812/rda-officeal-app/releases/latest" else url
+            var validUrl = url.trim()
+            if (validUrl.isBlank() || validUrl.contains("/releases/latest")) {
+                validUrl = "https://github.com/sidharth9812/rda-officeal-app"
+            }
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(validUrl)).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)
-            Toast.makeText(context, "Opening download link in browser...", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Opening download page in browser...", Toast.LENGTH_LONG).show()
             _updateState.value = UpdateState.Idle
         } catch (e: Exception) {
-            _updateState.value = UpdateState.Error("Unable to open browser download")
+            _updateState.value = UpdateState.Error("Unable to open browser download link: ${e.message}")
         }
     }
 
@@ -249,6 +297,12 @@ class GitHubUpdateManager(private val context: Context) {
         try {
             if (!apkFile.exists()) {
                 Toast.makeText(context, "Update APK file not found", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            if (!isApkFileValid(apkFile)) {
+                Toast.makeText(context, "Invalid APK file format. Opening download in browser...", Toast.LENGTH_LONG).show()
+                launchBrowserDownload("https://github.com/sidharth9812/rda-officeal-app")
                 return
             }
 
@@ -277,7 +331,14 @@ class GitHubUpdateManager(private val context: Context) {
                 addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
 
+            val resolveInfos = context.packageManager.queryIntentActivities(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+            for (resolveInfo in resolveInfos) {
+                val pkgName = resolveInfo.activityInfo.packageName
+                context.grantUriPermission(pkgName, apkUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
             context.startActivity(intent)
+            _updateState.value = UpdateState.Idle
         } catch (e: Exception) {
             Log.e(TAG, "Install failed: ${e.message}", e)
             Toast.makeText(context, "Failed to launch installer: ${e.message}", Toast.LENGTH_LONG).show()
@@ -298,7 +359,7 @@ class GitHubUpdateManager(private val context: Context) {
                 version = "v${config.versionName}",
                 releaseName = config.title,
                 body = config.releaseNotes,
-                downloadUrl = config.downloadUrl.ifBlank { "https://github.com/sidharth9812/rda-officeal-app/releases/latest" },
+                downloadUrl = config.downloadUrl.ifBlank { "https://github.com/sidharth9812/rda-officeal-app" },
                 apkSizeFormatted = "Direct Update Push",
                 publishedAt = ""
             )

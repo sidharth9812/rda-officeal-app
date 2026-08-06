@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.*
@@ -190,31 +191,48 @@ fun UpdateDialog(
 
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        Row(
+                        Column(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            OutlinedButton(
-                                onClick = onDismiss,
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text("Later", color = TextPrimary)
-                            }
-
                             Button(
                                 onClick = {
                                     scope.launch {
                                         updateManager.downloadAndInstallApk(release)
                                     }
                                 },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = NeonCyan)
                             ) {
                                 Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Update Now", color = Color.White, fontWeight = FontWeight.Bold)
+                                Text("Update Now (Auto Install)", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = onDismiss,
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text("Later", color = TextPrimary)
+                                }
+
+                                OutlinedButton(
+                                    onClick = {
+                                        updateManager.launchBrowserDownload(release.downloadUrl)
+                                    },
+                                    modifier = Modifier.weight(1.3f),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp), tint = NeonCyan)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Open Browser", color = NeonCyan, fontSize = 12.sp)
+                                }
                             }
                         }
                     }

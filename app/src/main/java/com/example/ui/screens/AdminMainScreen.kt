@@ -401,7 +401,7 @@ fun AdminPushUpdateDialog(
     var versionCodeStr by remember { mutableStateOf((currentConfig?.versionCode ?: (com.example.BuildConfig.VERSION_CODE + 1)).toString()) }
     var title by remember { mutableStateOf(currentConfig?.title ?: "New App Update & Features Available") }
     var releaseNotes by remember { mutableStateOf(currentConfig?.releaseNotes ?: "• Added direct update push system\n• Instant real-time Firestore sync across devices\n• Performance optimizations and bug fixes") }
-    var downloadUrl by remember { mutableStateOf(currentConfig?.downloadUrl ?: "https://github.com/sidharth9812/rda-officeal-app/releases/latest") }
+    var downloadUrl by remember { mutableStateOf(currentConfig?.downloadUrl ?: "https://github.com/sidharth9812/rda-officeal-app") }
     var isMandatory by remember { mutableStateOf(currentConfig?.isMandatory ?: false) }
     var isSubmitting by remember { mutableStateOf(false) }
 
@@ -571,7 +571,7 @@ fun AdminPushUpdateDialog(
                                 versionName = versionName.trim(),
                                 title = title.trim().ifBlank { "New App Update Available" },
                                 releaseNotes = releaseNotes.trim().ifBlank { "Features updated and bug fixes applied." },
-                                downloadUrl = downloadUrl.trim().ifBlank { "https://github.com/sidharth9812/rda-officeal-app/releases/latest" },
+                                downloadUrl = downloadUrl.trim().ifBlank { "https://github.com/sidharth9812/rda-officeal-app" },
                                 isMandatory = isMandatory,
                                 active = true,
                                 pushedByAdmin = "Academy Admin",
