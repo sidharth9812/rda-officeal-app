@@ -24,7 +24,7 @@ class AuthViewModel(
     application: Application
 ) : AndroidViewModel(application) {
 
-    val repository: AcademyRepository = AcademyRepository()
+    val repository: AcademyRepository = AcademyRepository(application)
     private val prefs = application.getSharedPreferences("rda_session_prefs", Context.MODE_PRIVATE)
 
     private val auth: FirebaseAuth? by lazy {
@@ -67,9 +67,6 @@ class AuthViewModel(
                             saveSession(updatedUser, updatedStudent)
                             _authState.value = AuthState.Authenticated(updatedUser, updatedStudent)
                         }
-                    } else if (studentList.isNotEmpty()) {
-                        clearSession()
-                        _authState.value = AuthState.Error("Your student account was deleted by the Administrator.")
                     }
                 }
             }
@@ -81,21 +78,20 @@ class AuthViewModel(
                 if (currentState is AuthState.Authenticated && (currentState.user.role == UserRole.STUDENT || currentState.user.role == UserRole.GROUP_LEADER)) {
                     val currentUser = currentState.user
                     val updatedUser = userList.find { it.uid == currentUser.uid }
-                    if (updatedUser == null) {
-                        clearSession()
-                        _authState.value = AuthState.Error("Your account was removed by the Administrator.")
-                    } else if (updatedUser.isBlocked) {
-                        clearSession()
-                        _authState.value = AuthState.Error("Your account has been BLOCKED by the Administrator.")
-                    } else if (updatedUser != currentUser) {
-                        val isLeaderNow = (updatedUser.role == UserRole.GROUP_LEADER)
-                        val updatedStudent = currentState.studentProfile?.copy(
-                            photoUrl = updatedUser.photoUrl.ifBlank { currentState.studentProfile.photoUrl },
-                            name = updatedUser.name.ifBlank { currentState.studentProfile.name },
-                            isLeader = isLeaderNow
-                        )
-                        saveSession(updatedUser, updatedStudent)
-                        _authState.value = AuthState.Authenticated(updatedUser, updatedStudent)
+                    if (updatedUser != null) {
+                        if (updatedUser.isBlocked) {
+                            clearSession()
+                            _authState.value = AuthState.Error("Your account has been BLOCKED by the Administrator.")
+                        } else if (updatedUser != currentUser) {
+                            val isLeaderNow = (updatedUser.role == UserRole.GROUP_LEADER)
+                            val updatedStudent = currentState.studentProfile?.copy(
+                                photoUrl = updatedUser.photoUrl.ifBlank { currentState.studentProfile.photoUrl },
+                                name = updatedUser.name.ifBlank { currentState.studentProfile.name },
+                                isLeader = isLeaderNow
+                            )
+                            saveSession(updatedUser, updatedStudent)
+                            _authState.value = AuthState.Authenticated(updatedUser, updatedStudent)
+                        }
                     }
                 }
             }
@@ -150,8 +146,8 @@ class AuthViewModel(
 
         val user = User(uid = uid, email = email, role = role, name = name, photoUrl = photoUrl)
 
-        val student = if (role == UserRole.STUDENT) {
-            val studentId = prefs.getString("student_id", "STU_${(1000..9999).random()}") ?: ""
+        val student = if (role == UserRole.STUDENT || role == UserRole.GROUP_LEADER) {
+            val rawStudentId = prefs.getString("student_id", "") ?: ""
             val fatherName = prefs.getString("father_name", "") ?: ""
             val dob = prefs.getString("dob", "2001-01-01") ?: "2001-01-01"
             val gender = prefs.getString("gender", "Male") ?: "Male"
@@ -166,6 +162,8 @@ class AuthViewModel(
             val fitnessNotes = prefs.getString("fitness_notes", "Building stamina & physical agility") ?: "Building stamina & physical agility"
             val isCompleted = prefs.getBoolean("profile_completed", false)
 
+            val studentId = rawStudentId.ifBlank { "STU_${uid.takeLast(6).uppercase()}" }
+
             Student(
                 studentId = studentId,
                 uid = uid,
@@ -179,6 +177,7 @@ class AuthViewModel(
                 batchId = batchId.ifBlank { repository.batches.value.firstOrNull { it.status == "ACTIVE" }?.batchId ?: "batch_mp_police_2026" },
                 groupId = groupId.ifBlank { repository.groups.value.firstOrNull()?.groupId ?: "group_mp_a" },
                 status = "ACTIVE",
+                isLeader = (role == UserRole.GROUP_LEADER),
                 profileCompleted = isCompleted,
                 targetExam = targetExam,
                 targetRunTime = targetRunTime,
@@ -228,31 +227,43 @@ class AuthViewModel(
 
         viewModelScope.launch {
             if (user.role == UserRole.STUDENT || user.role == UserRole.GROUP_LEADER) {
-                var student = repository.getStudentByUid(user.uid)
-                if (student != null && student.isBlocked) {
-                    clearSession()
-                    _authState.value = AuthState.Error("Your student account has been BLOCKED by the Academy Administrator.")
-                    return@launch
-                }
-                if (student == null) {
-                    student = Student(
-                        studentId = "STU_${(1000..9999).random()}",
-                        uid = user.uid,
-                        name = user.name,
-                        batchId = repository.batches.value.firstOrNull { it.status == "ACTIVE" }?.batchId ?: "batch_mp_police_2026",
-                        groupId = repository.groups.value.firstOrNull()?.groupId ?: "group_mp_a",
-                        status = "ACTIVE",
-                        isLeader = (user.role == UserRole.GROUP_LEADER),
-                        profileCompleted = false
-                    )
-                    repository.completeOrUpdateStudentProfile(student) {}
-                    _authState.value = AuthState.ProfileIncomplete(user, student)
-                } else if (!student.profileCompleted) {
-                    _authState.value = AuthState.ProfileIncomplete(user, student)
-                } else {
-                    val updatedStudent = if (user.role == UserRole.GROUP_LEADER && !student.isLeader) student.copy(isLeader = true) else student
-                    saveSession(user, updatedStudent)
-                    _authState.value = AuthState.Authenticated(user, updatedStudent)
+                repository.fetchStudentByUid(user.uid) { existingStudent ->
+                    if (existingStudent != null && existingStudent.isBlocked) {
+                        clearSession()
+                        _authState.value = AuthState.Error("Your student account has been BLOCKED by the Academy Administrator.")
+                        return@fetchStudentByUid
+                    }
+
+                    val savedSession = getSavedSession()
+                    val savedStudentProfile = savedSession?.second
+
+                    if (existingStudent == null) {
+                        if (savedStudentProfile != null) {
+                            repository.completeOrUpdateStudentProfile(savedStudentProfile) {}
+                            saveSession(user, savedStudentProfile)
+                            _authState.value = if (savedStudentProfile.profileCompleted) AuthState.Authenticated(user, savedStudentProfile) else AuthState.ProfileIncomplete(user, savedStudentProfile)
+                        } else {
+                            val newStudent = Student(
+                                studentId = "STU_${user.uid.takeLast(6).uppercase()}",
+                                uid = user.uid,
+                                name = user.name,
+                                batchId = repository.batches.value.firstOrNull { it.status == "ACTIVE" }?.batchId ?: "batch_mp_police_2026",
+                                groupId = repository.groups.value.firstOrNull()?.groupId ?: "group_mp_a",
+                                status = "ACTIVE",
+                                isLeader = (user.role == UserRole.GROUP_LEADER),
+                                profileCompleted = false
+                            )
+                            repository.completeOrUpdateStudentProfile(newStudent) {}
+                            _authState.value = AuthState.ProfileIncomplete(user, newStudent)
+                        }
+                    } else if (!existingStudent.profileCompleted) {
+                        val mergedStudent = if (savedStudentProfile != null && savedStudentProfile.profileCompleted) savedStudentProfile else existingStudent
+                        _authState.value = if (mergedStudent.profileCompleted) AuthState.Authenticated(user, mergedStudent) else AuthState.ProfileIncomplete(user, mergedStudent)
+                    } else {
+                        val updatedStudent = if (user.role == UserRole.GROUP_LEADER && !existingStudent.isLeader) existingStudent.copy(isLeader = true) else existingStudent
+                        saveSession(user, updatedStudent)
+                        _authState.value = AuthState.Authenticated(user, updatedStudent)
+                    }
                 }
             } else {
                 saveSession(user)

@@ -1,7 +1,9 @@
 package com.example.repository
 
+import android.content.Context
 import android.util.Log
 import com.example.model.*
+import com.example.util.LocalCacheManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
@@ -12,7 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.example.util.DateUtils
 
-class AcademyRepository {
+class AcademyRepository(private val context: Context? = null) {
     private val firestore: FirebaseFirestore? by lazy {
         try {
             val fs = FirebaseFirestore.getInstance()
@@ -72,13 +74,63 @@ class AcademyRepository {
     private val _developerInfo = MutableStateFlow<DeveloperInfo>(DeveloperInfo())
     val developerInfo: StateFlow<DeveloperInfo> = _developerInfo.asStateFlow()
 
+    private val _appUpdateConfig = MutableStateFlow<AppUpdateConfig?>(null)
+    val appUpdateConfig: StateFlow<AppUpdateConfig?> = _appUpdateConfig.asStateFlow()
+
     private val _isOffline = MutableStateFlow<Boolean>(false)
 
     val isOffline: StateFlow<Boolean> = _isOffline.asStateFlow()
 
     init {
-        seedInitialData()
+        loadDiskCacheOrSeed()
         setupFirestoreListeners()
+    }
+
+    private fun saveBatchesCache() = LocalCacheManager.saveList(context, "batches", _batches.value, Batch::class.java)
+    private fun saveGroupsCache() = LocalCacheManager.saveList(context, "groups", _groups.value, Group::class.java)
+    private fun saveStudentsCache() = LocalCacheManager.saveList(context, "students", _students.value, Student::class.java)
+    private fun saveAttendanceCache() = LocalCacheManager.saveList(context, "attendance", _attendance.value, AttendanceRecord::class.java)
+    private fun saveNoticesCache() = LocalCacheManager.saveList(context, "notices", _notices.value, Notice::class.java)
+    private fun saveCertificatesCache() = LocalCacheManager.saveList(context, "certificates", _certificates.value, Certificate::class.java)
+    private fun saveGalleryCache() = LocalCacheManager.saveList(context, "gallery", _gallery.value, GalleryItem::class.java)
+    private fun saveAchievementsCache() = LocalCacheManager.saveList(context, "achievements", _achievements.value, AchievementItem::class.java)
+    private fun saveUsersCache() = LocalCacheManager.saveList(context, "users", _users.value, User::class.java)
+    private fun saveDevInfoCache() = LocalCacheManager.saveObject(context, "developer_info", _developerInfo.value, DeveloperInfo::class.java)
+    private fun saveAppUpdateCache() {
+        val config = _appUpdateConfig.value
+        if (config != null) {
+            LocalCacheManager.saveObject(context, "app_update_config", config, AppUpdateConfig::class.java)
+        }
+    }
+
+    private fun loadDiskCacheOrSeed() {
+        val cachedBatches = LocalCacheManager.loadList(context, "batches", Batch::class.java)
+        val cachedGroups = LocalCacheManager.loadList(context, "groups", Group::class.java)
+        val cachedStudents = LocalCacheManager.loadList(context, "students", Student::class.java)
+        val cachedAttendance = LocalCacheManager.loadList(context, "attendance", AttendanceRecord::class.java)
+        val cachedNotices = LocalCacheManager.loadList(context, "notices", Notice::class.java)
+        val cachedCertificates = LocalCacheManager.loadList(context, "certificates", Certificate::class.java)
+        val cachedGallery = LocalCacheManager.loadList(context, "gallery", GalleryItem::class.java)
+        val cachedAchievements = LocalCacheManager.loadList(context, "achievements", AchievementItem::class.java)
+        val cachedUsers = LocalCacheManager.loadList(context, "users", User::class.java)
+        val cachedDevInfo = LocalCacheManager.loadObject(context, "developer_info", DeveloperInfo::class.java)
+        val cachedAppUpdate = LocalCacheManager.loadObject(context, "app_update_config", AppUpdateConfig::class.java)
+
+        if (cachedBatches != null && cachedBatches.isNotEmpty()) _batches.value = cachedBatches
+        if (cachedGroups != null && cachedGroups.isNotEmpty()) _groups.value = cachedGroups
+        if (cachedStudents != null) _students.value = cachedStudents
+        if (cachedAttendance != null) _attendance.value = cachedAttendance
+        if (cachedNotices != null && cachedNotices.isNotEmpty()) _notices.value = cachedNotices
+        if (cachedCertificates != null) _certificates.value = cachedCertificates
+        if (cachedGallery != null) _gallery.value = cachedGallery
+        if (cachedAchievements != null) _achievements.value = cachedAchievements
+        if (cachedUsers != null) _users.value = cachedUsers
+        if (cachedDevInfo != null) _developerInfo.value = cachedDevInfo
+        if (cachedAppUpdate != null) _appUpdateConfig.value = cachedAppUpdate
+
+        if (_batches.value.isEmpty() || _groups.value.isEmpty()) {
+            seedInitialData()
+        }
     }
 
     private fun seedInitialData() {
@@ -140,105 +192,9 @@ class AcademyRepository {
             )
         )
 
-        val initialUsers = listOf(
-            User("admin_uid_101", "admin@rdaphysical.com", UserRole.ADMIN, "Academy Director"),
-            User("leader_uid_201", "leader@rdaphysical.com", UserRole.GROUP_LEADER, "Instructor Vikram Singh"),
-            User("leader_uid_202", "rajesh@rdaphysical.com", UserRole.GROUP_LEADER, "Coach Rajesh Kumar"),
-            User("student_uid_301", "student@rdaphysical.com", UserRole.STUDENT, "Rahul Sharma"),
-            User("student_uid_302", "amit@rdaphysical.com", UserRole.STUDENT, "Amit Patel"),
-            User("student_uid_303", "vikas@rdaphysical.com", UserRole.STUDENT, "Vikas Gupta"),
-            User("student_uid_304", "priya@rdaphysical.com", UserRole.STUDENT, "Priya Singh"),
-            User("student_uid_305", "suresh@rdaphysical.com", UserRole.STUDENT, "Suresh Yadav")
-        )
-
-        val initialStudents = listOf(
-            Student(
-                studentId = "STU_1001",
-                uid = "student_uid_301",
-                name = "Rahul Sharma",
-                fatherName = "Ramesh Sharma",
-                dob = "2001-05-12",
-                gender = "Male",
-                mobile = "9876543210",
-                city = "Indore",
-                batchId = "batch_mp_police_2026",
-                groupId = "group_mp_a",
-                status = "ACTIVE",
-                profileCompleted = true
-            ),
-            Student(
-                studentId = "STU_1002",
-                uid = "student_uid_302",
-                name = "Amit Patel",
-                fatherName = "Suresh Patel",
-                dob = "2000-08-20",
-                gender = "Male",
-                mobile = "9876543211",
-                city = "Bhopal",
-                batchId = "batch_mp_police_2026",
-                groupId = "group_mp_a",
-                status = "ACTIVE",
-                profileCompleted = true
-            ),
-            Student(
-                studentId = "STU_1003",
-                uid = "student_uid_303",
-                name = "Vikas Gupta",
-                fatherName = "Mahesh Gupta",
-                dob = "2002-02-14",
-                gender = "Male",
-                mobile = "9876543212",
-                city = "Ujjain",
-                batchId = "batch_mp_police_2026",
-                groupId = "group_mp_a",
-                status = "ACTIVE",
-                profileCompleted = true
-            ),
-            Student(
-                studentId = "STU_1004",
-                uid = "student_uid_304",
-                name = "Priya Singh",
-                fatherName = "Dharampal Singh",
-                dob = "2003-11-05",
-                gender = "Female",
-                mobile = "9876543213",
-                city = "Gwalior",
-                batchId = "batch_mp_police_2026",
-                groupId = "group_mp_b",
-                status = "ACTIVE",
-                profileCompleted = true
-            ),
-            Student(
-                studentId = "STU_1005",
-                uid = "student_uid_305",
-                name = "Suresh Yadav",
-                fatherName = "Hariram Yadav",
-                dob = "1999-09-30",
-                gender = "Male",
-                mobile = "9876543214",
-                city = "Jabalpur",
-                batchId = "batch_army_2026",
-                groupId = "group_army_a",
-                status = "ACTIVE",
-                profileCompleted = true
-            )
-        )
-
-        val today = DateUtils.getTodayString(0)
-        val yesterday = DateUtils.getTodayString(-1)
-        val dayBefore = DateUtils.getTodayString(-2)
-
-        val initialAttendance = listOf(
-            AttendanceRecord("att_1", "STU_1001", "student_uid_301", "batch_mp_police_2026", "group_mp_a", today, AttendanceStatus.PRESENT, "leader_uid_201", "GROUP_LEADER"),
-            AttendanceRecord("att_2", "STU_1002", "student_uid_302", "batch_mp_police_2026", "group_mp_a", today, AttendanceStatus.PRESENT, "leader_uid_201", "GROUP_LEADER"),
-            AttendanceRecord("att_3", "STU_1003", "student_uid_303", "batch_mp_police_2026", "group_mp_a", today, AttendanceStatus.ABSENT, "leader_uid_201", "GROUP_LEADER"),
-            AttendanceRecord("att_4", "STU_1001", "student_uid_301", "batch_mp_police_2026", "group_mp_a", yesterday, AttendanceStatus.PRESENT, "leader_uid_201", "GROUP_LEADER"),
-            AttendanceRecord("att_5", "STU_1002", "student_uid_302", "batch_mp_police_2026", "group_mp_a", yesterday, AttendanceStatus.PRESENT, "leader_uid_201", "GROUP_LEADER"),
-            AttendanceRecord("att_6", "STU_1003", "student_uid_303", "batch_mp_police_2026", "group_mp_a", yesterday, AttendanceStatus.PRESENT, "leader_uid_201", "GROUP_LEADER"),
-            AttendanceRecord("att_7", "STU_1001", "student_uid_301", "batch_mp_police_2026", "group_mp_a", dayBefore, AttendanceStatus.PRESENT, "leader_uid_201", "GROUP_LEADER"),
-            AttendanceRecord("att_8", "STU_1002", "student_uid_302", "batch_mp_police_2026", "group_mp_a", dayBefore, AttendanceStatus.ABSENT, "leader_uid_201", "GROUP_LEADER"),
-            AttendanceRecord("att_9", "STU_1003", "student_uid_303", "batch_mp_police_2026", "group_mp_a", dayBefore, AttendanceStatus.PRESENT, "leader_uid_201", "GROUP_LEADER")
-        )
+        val initialUsers = emptyList<User>()
+        val initialStudents = emptyList<Student>()
+        val initialAttendance = emptyList<AttendanceRecord>()
 
         val initialNotices = listOf(
             Notice(
@@ -289,6 +245,7 @@ class AcademyRepository {
                     val list = snapshot.documents.mapNotNull { it.toObject(Batch::class.java) }
                     if (list.isNotEmpty()) {
                         _batches.value = list
+                        saveBatchesCache()
                     }
                 }
             }
@@ -298,6 +255,7 @@ class AcademyRepository {
                     val list = snapshot.documents.mapNotNull { it.toObject(Group::class.java) }
                     if (list.isNotEmpty()) {
                         _groups.value = list
+                        saveGroupsCache()
                     }
                 }
             }
@@ -306,7 +264,16 @@ class AcademyRepository {
                 if (error == null && snapshot != null) {
                     val list = snapshot.documents.mapNotNull { it.toObject(Student::class.java) }
                     if (list.isNotEmpty()) {
-                        _students.value = list
+                        val fsKeys = list.map { if (it.studentId.isNotBlank()) it.studentId else it.uid }.toSet()
+                        val merged = list.toMutableList()
+                        _students.value.forEach { local ->
+                            val key = if (local.studentId.isNotBlank()) local.studentId else local.uid
+                            if (key.isNotBlank() && !fsKeys.contains(key)) {
+                                merged.add(local)
+                            }
+                        }
+                        _students.value = merged
+                        saveStudentsCache()
                     }
                 }
             }
@@ -315,7 +282,15 @@ class AcademyRepository {
                 if (error == null && snapshot != null) {
                     val list = snapshot.documents.mapNotNull { it.toObject(AttendanceRecord::class.java) }
                     if (list.isNotEmpty()) {
-                        _attendance.value = list
+                        val fsKeys = list.map { it.attendanceId }.toSet()
+                        val merged = list.toMutableList()
+                        _attendance.value.forEach { local ->
+                            if (local.attendanceId.isNotBlank() && !fsKeys.contains(local.attendanceId)) {
+                                merged.add(local)
+                            }
+                        }
+                        _attendance.value = merged
+                        saveAttendanceCache()
                     }
                 }
             }
@@ -325,6 +300,7 @@ class AcademyRepository {
                     val list = snapshot.documents.mapNotNull { it.toObject(Notice::class.java) }
                     if (list.isNotEmpty()) {
                         _notices.value = list
+                        saveNoticesCache()
                     }
                 }
             }
@@ -334,6 +310,7 @@ class AcademyRepository {
                     val list = snapshot.documents.mapNotNull { it.toObject(Certificate::class.java) }
                     if (list.isNotEmpty()) {
                         _certificates.value = list
+                        saveCertificatesCache()
                     }
                 }
             }
@@ -343,6 +320,7 @@ class AcademyRepository {
                     val list = snapshot.documents.mapNotNull { it.toObject(GalleryItem::class.java) }
                     if (list.isNotEmpty()) {
                         _gallery.value = list
+                        saveGalleryCache()
                     }
                 }
             }
@@ -352,6 +330,7 @@ class AcademyRepository {
                     val list = snapshot.documents.mapNotNull { it.toObject(AchievementItem::class.java) }
                     if (list.isNotEmpty()) {
                         _achievements.value = list
+                        saveAchievementsCache()
                     }
                 }
             }
@@ -363,9 +342,9 @@ class AcademyRepository {
                     val roleTitle = snapshot.getString("roleTitle") ?: "App Developer & Technical Lead"
                     val updatedAt = snapshot.getLong("updatedAt") ?: System.currentTimeMillis()
                     _developerInfo.value = DeveloperInfo(name, photoUrl, roleTitle, updatedAt)
+                    saveDevInfoCache()
                 }
             }
-
 
             fs.collection("users").addSnapshotListener { snapshot, error ->
                 if (error == null && snapshot != null) {
@@ -383,13 +362,43 @@ class AcademyRepository {
                         }
                     }
                     if (list.isNotEmpty()) {
-                        _users.value = list
+                        val fsUids = list.map { it.uid }.toSet()
+                        val merged = list.toMutableList()
+                        _users.value.forEach { local ->
+                            if (local.uid.isNotBlank() && !fsUids.contains(local.uid)) {
+                                merged.add(local)
+                            }
+                        }
+                        _users.value = merged
+                        saveUsersCache()
+                    }
+                }
+            }
+
+            fs.collection("app_updates").document("latest").addSnapshotListener { snapshot, error ->
+                if (error == null && snapshot != null && snapshot.exists()) {
+                    val config = snapshot.toObject(AppUpdateConfig::class.java)
+                    if (config != null) {
+                        _appUpdateConfig.value = config
+                        saveAppUpdateCache()
                     }
                 }
             }
         } catch (e: Exception) {
             _isOffline.value = true
             Log.e("AcademyRepo", "Firestore snapshot registration error: ${e.message}")
+        }
+    }
+
+    fun pushAppUpdate(config: AppUpdateConfig, onComplete: (Boolean, String?) -> Unit) {
+        _appUpdateConfig.value = config
+        val fs = firestore
+        if (fs != null) {
+            fs.collection("app_updates").document("latest").set(config)
+                .addOnSuccessListener { onComplete(true, null) }
+                .addOnFailureListener { e -> onComplete(false, e.message) }
+        } else {
+            onComplete(true, null)
         }
     }
 
@@ -462,6 +471,26 @@ class AcademyRepository {
     // --- Student Profile Operations ---
     fun getStudentByUid(uid: String): Student? {
         return _students.value.find { it.uid == uid }
+    }
+
+    fun fetchStudentByUid(uid: String, onComplete: (Student?) -> Unit) {
+        val localStudent = _students.value.find { it.uid == uid }
+        val fs = firestore
+        if (fs != null) {
+            fs.collection("students").whereEqualTo("uid", uid).get()
+                .addOnSuccessListener { snapshot ->
+                    val found = snapshot?.documents?.firstOrNull()?.toObject(Student::class.java) ?: localStudent
+                    if (found != null) {
+                        _students.value = _students.value.filter { it.uid != uid && it.studentId != found.studentId } + found
+                    }
+                    onComplete(found)
+                }
+                .addOnFailureListener {
+                    onComplete(localStudent)
+                }
+        } else {
+            onComplete(localStudent)
+        }
     }
 
     fun completeOrUpdateStudentProfile(student: Student, onComplete: (Boolean) -> Unit) {

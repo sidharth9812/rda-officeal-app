@@ -119,6 +119,7 @@ fun AdminMainScreen(
                     attendanceList = attendanceList,
                     noticesList = noticesList,
                     developerInfo = developerInfo,
+                    repository = repository,
                     onEditDeveloper = { showEditDeveloperDialog = true },
                     onNavigateTab = { selectedTab = it }
                 )
@@ -149,11 +150,15 @@ fun AdminDashboardContent(
     attendanceList: List<AttendanceRecord>,
     noticesList: List<Notice> = emptyList(),
     developerInfo: DeveloperInfo = DeveloperInfo(),
+    repository: AcademyRepository,
     onEditDeveloper: () -> Unit = {},
     onNavigateTab: (Int) -> Unit
 ) {
     val activeStudents = students.count { it.status == "ACTIVE" }
     val activeBatches = batches.count { it.status == "ACTIVE" }
+
+    val appUpdateConfig by repository.appUpdateConfig.collectAsState()
+    var showPushUpdateDialog by remember { mutableStateOf(false) }
 
     val today = DateUtils.getTodayString()
     val todayRecords = attendanceList.filter { it.date == today }
@@ -162,82 +167,443 @@ fun AdminDashboardContent(
     val todayTotal = todayRecords.size
     val todayPercentage = if (todayTotal > 0) (todayPresent.toFloat() / todayTotal * 100).toInt() else 0
 
-    LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(bottom = 24.dp)
-    ) {
-        item {
-            Text("ACADEMY KEY METRICS (CLICK TO VIEW)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-            Spacer(modifier = Modifier.height(8.dp))
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(bottom = 24.dp)
+        ) {
+            item {
+                Text("ACADEMY KEY METRICS (CLICK TO VIEW)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Spacer(modifier = Modifier.height(8.dp))
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StatBox("ACTIVE STUDENTS", "$activeStudents", Icons.Default.People, NeonCyan, Modifier.weight(1f), onClick = { onNavigateTab(3) })
-                    StatBox("ACTIVE BATCHES", "$activeBatches", Icons.Default.Folder, ElectricPurple, Modifier.weight(1f), onClick = { onNavigateTab(1) })
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        StatBox("ACTIVE STUDENTS", "$activeStudents", Icons.Default.People, NeonCyan, Modifier.weight(1f), onClick = { onNavigateTab(3) })
+                        StatBox("ACTIVE BATCHES", "$activeBatches", Icons.Default.Folder, ElectricPurple, Modifier.weight(1f), onClick = { onNavigateTab(1) })
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        StatBox("GROUPS", "${groups.size}", Icons.Default.Groups, NeonPink, Modifier.weight(1f), onClick = { onNavigateTab(2) })
+                        StatBox("TODAY PRESENT", "$todayPresent", Icons.Default.CheckCircle, NeonGreen, Modifier.weight(1f), onClick = { onNavigateTab(4) })
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        StatBox("TODAY ABSENT", "$todayAbsent", Icons.Default.Cancel, NeonRed, Modifier.weight(1f), onClick = { onNavigateTab(4) })
+                        StatBox("ATTENDANCE RATE", "$todayPercentage%", Icons.Default.PieChart, BentoYellowOn, Modifier.weight(1f), onClick = { onNavigateTab(4) })
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        StatBox("NOTICES", "${noticesList.size}", Icons.Default.Campaign, BentoPurpleOn, Modifier.weight(1f), onClick = { onNavigateTab(5) })
+                        StatBox("REPORTS", "PDF Export", Icons.Default.PictureAsPdf, BentoCoralOn, Modifier.weight(1f), onClick = { onNavigateTab(6) })
+                    }
                 }
+            }
+
+            item {
+                AdminPushUpdateCard(
+                    currentConfig = appUpdateConfig,
+                    onOpenPushDialog = { showPushUpdateDialog = true }
+                )
+            }
+
+            item {
+                Text("QUICK MANAGEMENT ACTIONS", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StatBox("GROUPS", "${groups.size}", Icons.Default.Groups, NeonPink, Modifier.weight(1f), onClick = { onNavigateTab(2) })
-                    StatBox("TODAY PRESENT", "$todayPresent", Icons.Default.CheckCircle, NeonGreen, Modifier.weight(1f), onClick = { onNavigateTab(4) })
+                    CyberButton("ADD STUDENT", { onNavigateTab(3) }, Modifier.weight(1f), Icons.Default.PersonAdd, containerColor = BentoNavy, contentColor = Color.White)
+                    CyberButton("CREATE BATCH", { onNavigateTab(1) }, Modifier.weight(1f), Icons.Default.CreateNewFolder, containerColor = BentoPurpleOn, contentColor = Color.White)
                 }
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StatBox("TODAY ABSENT", "$todayAbsent", Icons.Default.Cancel, NeonRed, Modifier.weight(1f), onClick = { onNavigateTab(4) })
-                    StatBox("ATTENDANCE RATE", "$todayPercentage%", Icons.Default.PieChart, BentoYellowOn, Modifier.weight(1f), onClick = { onNavigateTab(4) })
+                    CyberButton("MARK ATTENDANCE", { onNavigateTab(4) }, Modifier.weight(1f), Icons.Default.Event, containerColor = BentoMintOn, contentColor = Color.White)
+                    CyberButton("GENERATE PDF", { onNavigateTab(6) }, Modifier.weight(1f), Icons.Default.PictureAsPdf, containerColor = BentoCoralOn, contentColor = Color.White)
                 }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StatBox("NOTICES", "${noticesList.size}", Icons.Default.Campaign, BentoPurpleOn, Modifier.weight(1f), onClick = { onNavigateTab(5) })
-                    StatBox("REPORTS", "PDF Export", Icons.Default.PictureAsPdf, BentoCoralOn, Modifier.weight(1f), onClick = { onNavigateTab(6) })
+            }
+
+            item {
+                DeveloperCard(
+                    developerInfo = developerInfo,
+                    onEditClick = onEditDeveloper
+                )
+            }
+
+            item {
+                Text("ACTIVE TRAINING BATCHES", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            }
+
+            items(batches.filter { it.status == "ACTIVE" }) { batch ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, CyberBorder, RoundedCornerShape(20.dp))
+                        .clickable { onNavigateTab(1) },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = CyberSurface)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(batch.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = BentoNavy)
+                            BatchBadge(batch.type, BentoPurpleOn)
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("Schedule: ${batch.schedule}", fontSize = 12.sp, color = TextSecondary)
+                        Text("Start: ${batch.startDate} @ ${batch.startTime}", fontSize = 11.sp, color = TextMuted)
+                    }
                 }
             }
         }
 
-        item {
-            Text("QUICK MANAGEMENT ACTIONS", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                CyberButton("ADD STUDENT", { onNavigateTab(3) }, Modifier.weight(1f), Icons.Default.PersonAdd, containerColor = BentoNavy, contentColor = Color.White)
-                CyberButton("CREATE BATCH", { onNavigateTab(1) }, Modifier.weight(1f), Icons.Default.CreateNewFolder, containerColor = BentoPurpleOn, contentColor = Color.White)
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                CyberButton("MARK ATTENDANCE", { onNavigateTab(4) }, Modifier.weight(1f), Icons.Default.Event, containerColor = BentoMintOn, contentColor = Color.White)
-                CyberButton("GENERATE PDF", { onNavigateTab(6) }, Modifier.weight(1f), Icons.Default.PictureAsPdf, containerColor = BentoCoralOn, contentColor = Color.White)
-            }
-        }
-
-        item {
-            DeveloperCard(
-                developerInfo = developerInfo,
-                onEditClick = onEditDeveloper
+        if (showPushUpdateDialog) {
+            AdminPushUpdateDialog(
+                currentConfig = appUpdateConfig,
+                repository = repository,
+                onDismiss = { showPushUpdateDialog = false }
             )
         }
+    }
+}
 
-        item {
-            Text("ACTIVE TRAINING BATCHES", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+@Composable
+fun AdminPushUpdateCard(
+    currentConfig: AppUpdateConfig?,
+    onOpenPushDialog: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, NeonCyan.copy(alpha = 0.5f), RoundedCornerShape(20.dp)),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = CyberSurface)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(NeonCyan.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SystemUpdate,
+                            contentDescription = "Push Updates",
+                            tint = NeonCyan,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = "DIRECT APP UPDATE BROADCAST",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = "Installed App: v${com.example.BuildConfig.VERSION_NAME} (${com.example.BuildConfig.VERSION_CODE})",
+                            fontSize = 11.sp,
+                            color = TextSecondary
+                        )
+                    }
+                }
+
+                Surface(
+                    color = if (currentConfig?.active == true) NeonGreen.copy(alpha = 0.15f) else TextMuted.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = if (currentConfig?.active == true) "PUSHED LIVE" else "IDLE",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (currentConfig?.active == true) NeonGreen else TextMuted,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            if (currentConfig != null && currentConfig.active) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(CyberBackground)
+                        .padding(12.dp)
+                ) {
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Active Push Target: v${currentConfig.versionName} (Code ${currentConfig.versionCode})",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = NeonCyan
+                            )
+                            if (currentConfig.isMandatory) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    color = NeonRed.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        text = "FORCED",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = NeonRed,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = currentConfig.title,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = currentConfig.releaseNotes,
+                            fontSize = 11.sp,
+                            color = TextSecondary,
+                            maxLines = 2
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Button(
+                onClick = onOpenPushDialog,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = NeonCyan)
+            ) {
+                Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.White)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("PUSH NEW APP UPDATE TO ALL DEVICES", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            }
         }
+    }
+}
 
-        items(batches.filter { it.status == "ACTIVE" }) { batch ->
-            Card(
+@Composable
+fun AdminPushUpdateDialog(
+    currentConfig: AppUpdateConfig?,
+    repository: AcademyRepository,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    var versionName by remember { mutableStateOf(currentConfig?.versionName ?: com.example.BuildConfig.VERSION_NAME) }
+    var versionCodeStr by remember { mutableStateOf((currentConfig?.versionCode ?: (com.example.BuildConfig.VERSION_CODE + 1)).toString()) }
+    var title by remember { mutableStateOf(currentConfig?.title ?: "New App Update & Features Available") }
+    var releaseNotes by remember { mutableStateOf(currentConfig?.releaseNotes ?: "• Added direct update push system\n• Instant real-time Firestore sync across devices\n• Performance optimizations and bug fixes") }
+    var downloadUrl by remember { mutableStateOf(currentConfig?.downloadUrl ?: "https://github.com/sidharth9812/rda-officeal-app/releases/latest") }
+    var isMandatory by remember { mutableStateOf(currentConfig?.isMandatory ?: false) }
+    var isSubmitting by remember { mutableStateOf(false) }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .padding(16.dp)
+                .border(1.dp, CyberBorder, RoundedCornerShape(24.dp)),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = CyberSurface)
+        ) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, CyberBorder, RoundedCornerShape(20.dp))
-                    .clickable { onNavigateTab(1) },
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = CyberSurface)
+                    .padding(20.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(batch.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = BentoNavy)
-                        BatchBadge(batch.type, BentoPurpleOn)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.CloudUpload, contentDescription = null, tint = NeonCyan)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Push App Update to Devices", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text("Schedule: ${batch.schedule}", fontSize = 12.sp, color = TextSecondary)
-                    Text("Start: ${batch.startDate} @ ${batch.startTime}", fontSize = 11.sp, color = TextMuted)
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = TextSecondary)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "Broadcast an app update to all registered student and instructor devices via Firestore in real time.",
+                    fontSize = 11.sp,
+                    color = TextSecondary
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Version Name", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedTextField(
+                            value = versionName,
+                            onValueChange = { versionName = it },
+                            placeholder = { Text("1.1.0") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Version Code", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedTextField(
+                            value = versionCodeStr,
+                            onValueChange = { versionCodeStr = it.filter { char -> char.isDigit() } },
+                            placeholder = { Text("2") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text("Update Headline / Title", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    placeholder = { Text("Major Feature & Bug Fix Update") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text("Release Notes / What's New", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = releaseNotes,
+                    onValueChange = { releaseNotes = it },
+                    placeholder = { Text("Describe changes and new features...") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
+                    maxLines = 4
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text("APK Download / Share Link", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = downloadUrl,
+                    onValueChange = { downloadUrl = it },
+                    placeholder = { Text("https://...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text("Mandatory / Forced Update", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Text("Require students to update immediately", fontSize = 10.sp, color = TextSecondary)
+                    }
+                    Switch(
+                        checked = isMandatory,
+                        onCheckedChange = { isMandatory = it },
+                        colors = SwitchDefaults.colors(checkedThumbColor = NeonCyan)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (currentConfig?.active == true) {
+                        OutlinedButton(
+                            onClick = {
+                                isSubmitting = true
+                                val deactivated = currentConfig.copy(active = false, updatedAt = System.currentTimeMillis())
+                                repository.pushAppUpdate(deactivated) { success, err ->
+                                    isSubmitting = false
+                                    if (success) {
+                                        Toast.makeText(context, "Update alert deactivated.", Toast.LENGTH_SHORT).show()
+                                        onDismiss()
+                                    } else {
+                                        Toast.makeText(context, "Error: $err", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !isSubmitting
+                        ) {
+                            Text("Deactivate Alert", fontSize = 11.sp, color = NeonRed)
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            val code = versionCodeStr.toIntOrNull() ?: (com.example.BuildConfig.VERSION_CODE + 1)
+                            if (versionName.isBlank()) {
+                                Toast.makeText(context, "Please enter version name", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+                            isSubmitting = true
+                            val config = AppUpdateConfig(
+                                configId = "latest",
+                                versionCode = code,
+                                versionName = versionName.trim(),
+                                title = title.trim().ifBlank { "New App Update Available" },
+                                releaseNotes = releaseNotes.trim().ifBlank { "Features updated and bug fixes applied." },
+                                downloadUrl = downloadUrl.trim().ifBlank { "https://github.com/sidharth9812/rda-officeal-app/releases/latest" },
+                                isMandatory = isMandatory,
+                                active = true,
+                                pushedByAdmin = "Academy Admin",
+                                updatedAt = System.currentTimeMillis()
+                            )
+                            repository.pushAppUpdate(config) { success, err ->
+                                isSubmitting = false
+                                if (success) {
+                                    Toast.makeText(context, "Update pushed to all devices via Firestore!", Toast.LENGTH_LONG).show()
+                                    onDismiss()
+                                } else {
+                                    Toast.makeText(context, "Failed to push update: $err", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
+                        enabled = !isSubmitting
+                    ) {
+                        if (isSubmitting) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                        } else {
+                            Text("PUSH LIVE UPDATE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                    }
                 }
             }
         }
     }
 }
+
 
 @Composable
 fun AdminBatchesContent(

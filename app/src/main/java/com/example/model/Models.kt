@@ -159,3 +159,16 @@ data class DeveloperInfo(
     val updatedAt: Long = System.currentTimeMillis()
 )
 
+data class AppUpdateConfig(
+    val configId: String = "latest",
+    val versionCode: Int = 1,
+    val versionName: String = "1.0.0",
+    val title: String = "New App Update Available",
+    val releaseNotes: String = "New features, performance enhancements & bug fixes.",
+    val downloadUrl: String = "https://github.com/sidharth9812/rda-officeal-app/releases/latest",
+    val isMandatory: Boolean = false,
+    val active: Boolean = true,
+    val pushedByAdmin: String = "Academy Admin",
+    val updatedAt: Long = System.currentTimeMillis()
+)
+

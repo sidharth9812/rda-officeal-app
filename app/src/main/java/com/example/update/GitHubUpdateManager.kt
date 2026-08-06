@@ -272,4 +272,22 @@ class GitHubUpdateManager(private val context: Context) {
     fun dismissUpdate() {
         _updateState.value = UpdateState.Idle
     }
+
+    fun triggerFirestoreUpdate(config: com.example.model.AppUpdateConfig) {
+        if (!config.active) return
+        val currentVersion = BuildConfig.VERSION_NAME
+        val currentCode = BuildConfig.VERSION_CODE
+        val isNewer = config.versionCode > currentCode || isNewerVersion(currentVersion, config.versionName)
+        if (isNewer || config.isMandatory) {
+            val releaseInfo = GitHubReleaseInfo(
+                version = "v${config.versionName}",
+                releaseName = config.title,
+                body = config.releaseNotes,
+                downloadUrl = config.downloadUrl.ifBlank { "https://github.com/sidharth9812/rda-officeal-app/releases/latest" },
+                apkSizeFormatted = "Direct Update Push",
+                publishedAt = ""
+            )
+            _updateState.value = UpdateState.UpdateAvailable(releaseInfo)
+        }
+    }
 }

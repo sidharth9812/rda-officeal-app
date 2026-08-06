@@ -1154,21 +1154,17 @@ fun AdminEditDeveloperDialog(
                         .clickable { if (!isUploading) photoPickerLauncher.launch("image/*") },
                     contentAlignment = Alignment.Center
                 ) {
-                    if (photoUrl.startsWith("http://") || photoUrl.startsWith("https://") || photoUrl.startsWith("content://") || photoUrl.startsWith("file://")) {
-                        AsyncImage(
-                            model = photoUrl,
-                            contentDescription = "Developer Photo",
-                            modifier = Modifier.fillMaxSize().clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
+                    val photoModel: Any = if (photoUrl.startsWith("http://") || photoUrl.startsWith("https://") || photoUrl.startsWith("content://") || photoUrl.startsWith("file://")) {
+                        photoUrl
                     } else {
-                        Image(
-                            painter = painterResource(id = R.drawable.dev_photo),
-                            contentDescription = "Developer Photo",
-                            modifier = Modifier.fillMaxSize().clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
+                        R.drawable.dev_photo
                     }
+                    AsyncImage(
+                        model = photoModel,
+                        contentDescription = "Developer Photo",
+                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
 
                     Box(
                         modifier = Modifier
