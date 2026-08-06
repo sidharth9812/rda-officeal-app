@@ -31,6 +31,9 @@ jobs:
         with:
           gradle-version: '8.11.1'
 
+      - name: Verify Gradle Version
+        run: gradle --version
+
       - name: Prepare Signing Keystore
         run: |
           if [ ! -f my-upload-key.jks ]; then

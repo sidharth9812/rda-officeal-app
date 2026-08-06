@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
@@ -224,7 +225,10 @@ class GitHubUpdateManager(private val context: Context) {
                 _updateState.value = UpdateState.Downloading(0, "0 MB", release.apkSizeFormatted)
 
                 val candidates = getCandidateUrls(release)
-                val updateDir = File(context.cacheDir, "updates").apply { mkdirs() }
+                val updateDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+                    ?: context.getExternalCacheDir()
+                    ?: File(context.filesDir, "updates")
+                updateDir.mkdirs()
                 val apkFile = File(updateDir, "rda_update.apk")
 
                 var downloadSuccess = false
@@ -382,7 +386,10 @@ class GitHubUpdateManager(private val context: Context) {
                 "com.google.android.packageinstaller",
                 "com.android.packageinstaller",
                 "com.samsung.android.packageinstaller",
-                "com.miui.packageinstaller"
+                "com.miui.packageinstaller",
+                "com.coloros.packageinstaller",
+                "com.oppo.packageinstaller",
+                "com.vivo.packageinstaller"
             )
             for (pkg in knownInstallers) {
                 try {
@@ -390,7 +397,7 @@ class GitHubUpdateManager(private val context: Context) {
                 } catch (_: Exception) {}
             }
 
-            val resolveInfos = context.packageManager.queryIntentActivities(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+            val resolveInfos = context.packageManager.queryIntentActivities(intent, android.content.pm.PackageManager.MATCH_ALL)
             for (resolveInfo in resolveInfos) {
                 val pkgName = resolveInfo.activityInfo.packageName
                 try {
@@ -399,10 +406,9 @@ class GitHubUpdateManager(private val context: Context) {
             }
 
             context.startActivity(intent)
-            _updateState.value = UpdateState.Idle
         } catch (e: Exception) {
             Log.e(TAG, "Install failed: ${e.message}", e)
-            _updateState.value = UpdateState.Error("Failed to launch package installer: ${e.localizedMessage ?: e.message}")
+            _updateState.value = UpdateState.Error("Failed to launch package installer: ${e.localizedMessage ?: e.message}. Please enable 'Install unknown apps' in Settings or try again.")
         }
     }
 
