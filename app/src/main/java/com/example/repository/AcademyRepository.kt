@@ -530,8 +530,9 @@ class AcademyRepository(private val context: Context? = null) {
     }
 
     fun deleteBatch(batchId: String, onComplete: (Boolean, String?) -> Unit) {
-        // 1. Remove batch from local state flow
+        // 1. Remove batch from local state flow & cache
         _batches.value = _batches.value.filterNot { it.batchId == batchId }
+        saveBatchesCache()
 
         // 2. Unassign students belonging to this batch
         _students.value = _students.value.map { student ->
@@ -539,13 +540,17 @@ class AcademyRepository(private val context: Context? = null) {
                 student.copy(batchId = "", groupId = "", updatedAt = System.currentTimeMillis())
             } else student
         }
+        saveStudentsCache()
 
         // 3. Remove groups belonging to this batch
         _groups.value = _groups.value.filterNot { it.batchId == batchId }
+        saveGroupsCache()
 
         // 4. Firestore operations
         if (firestore != null) {
             firestore?.collection("batches")?.document(batchId)?.delete()
+                ?.addOnSuccessListener { onComplete(true, null) }
+                ?.addOnFailureListener { e -> onComplete(false, e.message) }
 
             firestore?.collection("students")?.whereEqualTo("batchId", batchId)?.get()
                 ?.addOnSuccessListener { snapshot ->
@@ -560,9 +565,9 @@ class AcademyRepository(private val context: Context? = null) {
                         doc.reference.delete()
                     }
                 }
+        } else {
+            onComplete(true, null)
         }
-
-        onComplete(true, null)
     }
 
     fun closeBatch(batchId: String, onComplete: (Boolean) -> Unit) {
@@ -603,17 +608,22 @@ class AcademyRepository(private val context: Context? = null) {
     }
 
     fun deleteGroup(groupId: String, onComplete: (Boolean, String?) -> Unit) {
+        // 1. Remove group from local state flow & cache
         _groups.value = _groups.value.filterNot { it.groupId == groupId }
+        saveGroupsCache()
 
-        // Unassign students from this group
+        // 2. Unassign students from this group
         _students.value = _students.value.map { student ->
             if (student.groupId == groupId) {
                 student.copy(groupId = "", updatedAt = System.currentTimeMillis())
             } else student
         }
+        saveStudentsCache()
 
         if (firestore != null) {
             firestore?.collection("groups")?.document(groupId)?.delete()
+                ?.addOnSuccessListener { onComplete(true, null) }
+                ?.addOnFailureListener { e -> onComplete(false, e.message) }
 
             firestore?.collection("students")?.whereEqualTo("groupId", groupId)?.get()
                 ?.addOnSuccessListener { snapshot ->
@@ -621,9 +631,9 @@ class AcademyRepository(private val context: Context? = null) {
                         doc.reference.update(mapOf("groupId" to "", "updatedAt" to System.currentTimeMillis()))
                     }
                 }
+        } else {
+            onComplete(true, null)
         }
-
-        onComplete(true, null)
     }
 
     fun assignGroupLeader(groupId: String, leaderId: String, leaderName: String, onComplete: (Boolean) -> Unit) {
@@ -873,14 +883,17 @@ class AcademyRepository(private val context: Context? = null) {
         _students.value = _students.value.filterNot {
             it.studentId == studentId || (studentUid.isNotBlank() && it.uid == studentUid)
         }
+        saveStudentsCache()
 
         if (studentUid.isNotBlank()) {
             _users.value = _users.value.filterNot { it.uid == studentUid }
+            saveUsersCache()
         }
 
         _attendance.value = _attendance.value.filterNot {
             it.studentId == studentId || (studentUid.isNotBlank() && it.studentUid == studentUid)
         }
+        saveAttendanceCache()
 
         // 2. Realtime Firebase Firestore Cleanup
         if (firestore != null) {
@@ -981,6 +994,7 @@ class AcademyRepository(private val context: Context? = null) {
 
     fun deleteNotice(noticeId: String, onComplete: (Boolean) -> Unit) {
         _notices.value = _notices.value.filter { it.noticeId != noticeId }
+        saveNoticesCache()
 
         firestore?.collection("notices")?.document(noticeId)?.delete()
             ?.addOnSuccessListener { onComplete(true) }
@@ -1003,6 +1017,7 @@ class AcademyRepository(private val context: Context? = null) {
 
     fun deleteCertificate(certificateId: String, onComplete: (Boolean) -> Unit) {
         _certificates.value = _certificates.value.filter { it.certificateId != certificateId }
+        saveCertificatesCache()
         firestore?.collection("certificates")?.document(certificateId)?.delete()
             ?.addOnSuccessListener { onComplete(true) }
             ?.addOnFailureListener { onComplete(true) }
@@ -1014,6 +1029,7 @@ class AcademyRepository(private val context: Context? = null) {
         val newItem = item.copy(itemId = itemId, createdAt = System.currentTimeMillis())
 
         _gallery.value = listOf(newItem) + _gallery.value.filter { it.itemId != itemId }
+        saveGalleryCache()
 
         firestore?.collection("gallery")?.document(itemId)?.set(newItem)
             ?.addOnSuccessListener { onComplete(true, null) }
@@ -1023,6 +1039,7 @@ class AcademyRepository(private val context: Context? = null) {
 
     fun deleteGalleryItem(itemId: String, onComplete: (Boolean) -> Unit) {
         _gallery.value = _gallery.value.filter { it.itemId != itemId }
+        saveGalleryCache()
         firestore?.collection("gallery")?.document(itemId)?.delete()
             ?.addOnSuccessListener { onComplete(true) }
             ?.addOnFailureListener { onComplete(true) }
@@ -1034,6 +1051,7 @@ class AcademyRepository(private val context: Context? = null) {
         val newAch = achievement.copy(achievementId = achId, createdAt = System.currentTimeMillis())
 
         _achievements.value = listOf(newAch) + _achievements.value.filter { it.achievementId != achId }
+        saveAchievementsCache()
 
         firestore?.collection("achievements")?.document(achId)?.set(newAch)
             ?.addOnSuccessListener { onComplete(true, null) }
@@ -1043,6 +1061,7 @@ class AcademyRepository(private val context: Context? = null) {
 
     fun deleteAchievement(achievementId: String, onComplete: (Boolean) -> Unit) {
         _achievements.value = _achievements.value.filter { it.achievementId != achievementId }
+        saveAchievementsCache()
         firestore?.collection("achievements")?.document(achievementId)?.delete()
             ?.addOnSuccessListener { onComplete(true) }
             ?.addOnFailureListener { onComplete(true) }

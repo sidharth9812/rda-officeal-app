@@ -6,6 +6,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -23,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -38,6 +41,9 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AdminMainScreen(
     user: User,
@@ -2909,7 +2915,10 @@ fun AdminStudentsContent(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 ProfileAvatar(
                                     photoUrl = student.photoUrl,
                                     size = 42.dp,
@@ -2917,11 +2926,27 @@ fun AdminStudentsContent(
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Column {
-                                    Text(student.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                                    Text("ID: ${student.studentId}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = BentoNavy)
+                                    Text(
+                                        text = student.name,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = "ID: ${student.studentId}",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = BentoNavy
+                                    )
                                 }
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 if (student.isLeader) {
                                     BatchBadge("LEADER", BentoPurpleOn)
                                 }
@@ -2945,7 +2970,7 @@ fun AdminStudentsContent(
                         Divider(color = CyberBorder.copy(alpha = 0.5f))
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Action Buttons: VIEW PROGRESS, LEADER ROLE, BLOCK/UNBLOCK, DELETE
+                        // Action Buttons: PROGRESS, LEADER ROLE, BLOCK/UNBLOCK, DELETE
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -2953,13 +2978,14 @@ fun AdminStudentsContent(
                         ) {
                             Button(
                                 onClick = { studentForProgressModal = student },
+                                modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(containerColor = BentoNavy),
                                 shape = RoundedCornerShape(100.dp),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
                             ) {
-                                Icon(Icons.Default.Visibility, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("PROGRESS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Icon(Icons.Default.Visibility, contentDescription = "Progress", tint = Color.White, modifier = Modifier.size(13.dp))
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text("Progress", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
                             }
 
                             if (student.isLeader) {
@@ -2969,26 +2995,28 @@ fun AdminStudentsContent(
                                             Toast.makeText(context, "Leader authority removed from ${student.name}", Toast.LENGTH_SHORT).show()
                                         }
                                     },
+                                    modifier = Modifier.weight(1f),
                                     colors = ButtonDefaults.outlinedButtonColors(contentColor = BentoPurpleOn),
                                     border = BorderStroke(1.dp, BentoPurpleOn),
                                     shape = RoundedCornerShape(100.dp),
-                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
                                 ) {
-                                    Icon(Icons.Default.Stars, contentDescription = null, modifier = Modifier.size(14.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("REMOVE LEADER", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Icon(Icons.Default.Stars, contentDescription = "Leader", modifier = Modifier.size(13.dp))
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text("Leader", fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                                 }
                             } else {
                                 OutlinedButton(
                                     onClick = { studentForLeaderRole = student },
+                                    modifier = Modifier.weight(1f),
                                     colors = ButtonDefaults.outlinedButtonColors(contentColor = BentoPurpleOn),
                                     border = BorderStroke(1.dp, BentoPurpleOn),
                                     shape = RoundedCornerShape(100.dp),
-                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
                                 ) {
-                                    Icon(Icons.Default.Stars, contentDescription = null, modifier = Modifier.size(14.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("MAKE LEADER", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Icon(Icons.Default.Stars, contentDescription = "Make Leader", modifier = Modifier.size(13.dp))
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text("+ Leader", fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                                 }
                             }
 
@@ -2999,38 +3027,44 @@ fun AdminStudentsContent(
                                             Toast.makeText(context, "${student.name} is UNBLOCKED", Toast.LENGTH_SHORT).show()
                                         }
                                     },
+                                    modifier = Modifier.weight(1f),
                                     colors = ButtonDefaults.outlinedButtonColors(contentColor = BentoMintOn),
                                     border = BorderStroke(1.dp, BentoMintOn),
                                     shape = RoundedCornerShape(100.dp),
-                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
                                 ) {
-                                    Icon(Icons.Default.LockOpen, contentDescription = null, modifier = Modifier.size(14.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("UNBLOCK", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Icon(Icons.Default.LockOpen, contentDescription = "Unblock", modifier = Modifier.size(13.dp))
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text("Unblock", fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                                 }
                             } else {
                                 OutlinedButton(
                                     onClick = { studentToBlock = student },
+                                    modifier = Modifier.weight(1f),
                                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE65100)),
                                     border = BorderStroke(1.dp, Color(0xFFE65100)),
                                     shape = RoundedCornerShape(100.dp),
-                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
                                 ) {
-                                    Icon(Icons.Default.Block, contentDescription = null, modifier = Modifier.size(14.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("BLOCK", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Icon(Icons.Default.Block, contentDescription = "Block", modifier = Modifier.size(13.dp))
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text("Block", fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                                 }
                             }
 
-                            Button(
+                            IconButton(
                                 onClick = { studentToDelete = student },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
-                                shape = RoundedCornerShape(100.dp),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(Color(0xFFFFEBEE), CircleShape)
+                                    .border(1.dp, Color(0xFFFFCDD2), CircleShape)
                             ) {
-                                Icon(Icons.Default.Delete, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("DELETE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Delete Student",
+                                    tint = Color(0xFFD32F2F),
+                                    modifier = Modifier.size(16.dp)
+                                )
                             }
                         }
                     }
@@ -4284,6 +4318,33 @@ fun AdminNoticesContent(
     var title by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
     var targetType by remember { mutableStateOf(NoticeTargetType.ALL) }
+    var noticeToDelete by remember { mutableStateOf<Notice?>(null) }
+
+    noticeToDelete?.let { target ->
+        AlertDialog(
+            onDismissRequest = { noticeToDelete = null },
+            icon = { Icon(Icons.Default.Delete, contentDescription = null, tint = BentoCoralOn) },
+            title = { Text("Delete Notice", fontWeight = FontWeight.Bold, color = TextPrimary) },
+            text = { Text("Are you sure you want to permanently delete notice '${target.title}' from Firebase?", color = TextSecondary) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val id = target.noticeId
+                        noticeToDelete = null
+                        repository.deleteNotice(id) {
+                            Toast.makeText(context, "Notice permanently deleted from Firebase.", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BentoCoralOn)
+                ) {
+                    Text("DELETE", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { noticeToDelete = null }) { Text("CANCEL", color = TextSecondary) }
+            }
+        )
+    }
 
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -4362,7 +4423,7 @@ fun AdminNoticesContent(
                         Text(notice.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = BentoNavy)
                         Text(notice.message, fontSize = 12.sp, color = TextSecondary)
                     }
-                    IconButton(onClick = { repository.deleteNotice(notice.noticeId) {} }) {
+                    IconButton(onClick = { noticeToDelete = notice }) {
                         Icon(Icons.Default.Delete, contentDescription = "Delete", tint = BentoCoralOn)
                     }
                 }
