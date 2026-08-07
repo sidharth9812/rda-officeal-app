@@ -29,6 +29,8 @@ import com.example.update.GitHubUpdateManager
 import com.example.update.UpdateDialog
 import kotlinx.coroutines.launch
 
+import com.example.ui.theme.ThemeManager
+
 class MainActivity : ComponentActivity() {
 
     private val requestPermissionLauncher = registerForActivityResult(
@@ -37,6 +39,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ThemeManager.init(this)
         enableEdgeToEdge()
 
         // Create notification channels

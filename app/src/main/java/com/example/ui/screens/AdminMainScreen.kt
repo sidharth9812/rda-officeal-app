@@ -2970,101 +2970,113 @@ fun AdminStudentsContent(
                         Divider(color = CyberBorder.copy(alpha = 0.5f))
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Action Buttons: PROGRESS, LEADER ROLE, BLOCK/UNBLOCK, DELETE
-                        Row(
+                        // Action Buttons: 2 Well-Organized Rows to prevent overlap & keep buttons prominent
+                        Column(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Button(
-                                onClick = { studentForProgressModal = student },
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = BentoNavy),
-                                shape = RoundedCornerShape(100.dp),
-                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
+                            // Row 1: Primary Actions (Progress & Leader)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Icon(Icons.Default.Visibility, contentDescription = "Progress", tint = Color.White, modifier = Modifier.size(13.dp))
-                                Spacer(modifier = Modifier.width(3.dp))
-                                Text("Progress", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
-                            }
+                                Button(
+                                    onClick = { studentForProgressModal = student },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(containerColor = BentoNavy),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                                ) {
+                                    Icon(Icons.Default.Visibility, contentDescription = "Progress", tint = Color.White, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Progress", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
+                                }
 
-                            if (student.isLeader) {
-                                OutlinedButton(
-                                    onClick = {
-                                        repository.removeLeaderRoleFromStudent(student) {
-                                            Toast.makeText(context, "Leader authority removed from ${student.name}", Toast.LENGTH_SHORT).show()
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = BentoPurpleOn),
-                                    border = BorderStroke(1.dp, BentoPurpleOn),
-                                    shape = RoundedCornerShape(100.dp),
-                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
-                                ) {
-                                    Icon(Icons.Default.Stars, contentDescription = "Leader", modifier = Modifier.size(13.dp))
-                                    Spacer(modifier = Modifier.width(3.dp))
-                                    Text("Leader", fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                                }
-                            } else {
-                                OutlinedButton(
-                                    onClick = { studentForLeaderRole = student },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = BentoPurpleOn),
-                                    border = BorderStroke(1.dp, BentoPurpleOn),
-                                    shape = RoundedCornerShape(100.dp),
-                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
-                                ) {
-                                    Icon(Icons.Default.Stars, contentDescription = "Make Leader", modifier = Modifier.size(13.dp))
-                                    Spacer(modifier = Modifier.width(3.dp))
-                                    Text("+ Leader", fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                                }
-                            }
-
-                            if (student.isBlocked) {
-                                OutlinedButton(
-                                    onClick = {
-                                        repository.blockStudent(student.studentId, student.uid, block = false) { _, _ ->
-                                            Toast.makeText(context, "${student.name} is UNBLOCKED", Toast.LENGTH_SHORT).show()
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = BentoMintOn),
-                                    border = BorderStroke(1.dp, BentoMintOn),
-                                    shape = RoundedCornerShape(100.dp),
-                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
-                                ) {
-                                    Icon(Icons.Default.LockOpen, contentDescription = "Unblock", modifier = Modifier.size(13.dp))
-                                    Spacer(modifier = Modifier.width(3.dp))
-                                    Text("Unblock", fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                                }
-                            } else {
-                                OutlinedButton(
-                                    onClick = { studentToBlock = student },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE65100)),
-                                    border = BorderStroke(1.dp, Color(0xFFE65100)),
-                                    shape = RoundedCornerShape(100.dp),
-                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
-                                ) {
-                                    Icon(Icons.Default.Block, contentDescription = "Block", modifier = Modifier.size(13.dp))
-                                    Spacer(modifier = Modifier.width(3.dp))
-                                    Text("Block", fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                if (student.isLeader) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            repository.removeLeaderRoleFromStudent(student) {
+                                                Toast.makeText(context, "Leader authority removed from ${student.name}", Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = BentoPurpleOn),
+                                        border = BorderStroke(1.dp, BentoPurpleOn),
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                                    ) {
+                                        Icon(Icons.Default.Stars, contentDescription = "Leader", modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Leader", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                    }
+                                } else {
+                                    OutlinedButton(
+                                        onClick = { studentForLeaderRole = student },
+                                        modifier = Modifier.weight(1f),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = BentoPurpleOn),
+                                        border = BorderStroke(1.dp, BentoPurpleOn),
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                                    ) {
+                                        Icon(Icons.Default.Stars, contentDescription = "Make Leader", modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("+ Leader", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                    }
                                 }
                             }
 
-                            IconButton(
-                                onClick = { studentToDelete = student },
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .background(Color(0xFFFFEBEE), CircleShape)
-                                    .border(1.dp, Color(0xFFFFCDD2), CircleShape)
+                            // Row 2: Management & Danger Actions (Block & Delete)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = "Delete Student",
-                                    tint = Color(0xFFD32F2F),
-                                    modifier = Modifier.size(16.dp)
-                                )
+                                if (student.isBlocked) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            repository.blockStudent(student.studentId, student.uid, block = false) { _, _ ->
+                                                Toast.makeText(context, "${student.name} is UNBLOCKED", Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = BentoMintOn),
+                                        border = BorderStroke(1.dp, BentoMintOn),
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                                    ) {
+                                        Icon(Icons.Default.LockOpen, contentDescription = "Unblock", modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Unblock", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                    }
+                                } else {
+                                    OutlinedButton(
+                                        onClick = { studentToBlock = student },
+                                        modifier = Modifier.weight(1f),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE65100)),
+                                        border = BorderStroke(1.dp, Color(0xFFE65100)),
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                                    ) {
+                                        Icon(Icons.Default.Block, contentDescription = "Block", modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Block", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                    }
+                                }
+
+                                OutlinedButton(
+                                    onClick = { studentToDelete = student },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        containerColor = Color(0xFFFFEBEE),
+                                        contentColor = Color(0xFFD32F2F)
+                                    ),
+                                    border = BorderStroke(1.dp, Color(0xFFFFCDD2)),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                                ) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(14.dp), tint = Color(0xFFD32F2F))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Delete", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F), maxLines = 1)
+                                }
                             }
                         }
                     }
@@ -4440,7 +4452,53 @@ fun AdminReportsContent(
     attendanceList: List<AttendanceRecord>
 ) {
     val context = LocalContext.current
-    var selectedReportType by remember { mutableStateOf("ALL_STUDENTS") }
+
+    var selectedReportType by remember { mutableStateOf("DAILY") }
+
+    // Date parameters
+    var selectedDailyDate by remember { mutableStateOf(DateUtils.getTodayString()) }
+
+    val currentCal = Calendar.getInstance()
+    var selectedMonth by remember { mutableStateOf(currentCal.get(Calendar.MONTH) + 1) } // 1..12
+    var selectedYear by remember { mutableStateOf(currentCal.get(Calendar.YEAR)) }
+
+    var customFromDate by remember { mutableStateOf(DateUtils.getTodayString(-30)) }
+    var customToDate by remember { mutableStateOf(DateUtils.getTodayString()) }
+
+    var selectedStudent by remember { mutableStateOf<Student?>(students.firstOrNull()) }
+    var studentFromDate by remember { mutableStateOf(DateUtils.getTodayString(-30)) }
+    var studentToDate by remember { mutableStateOf(DateUtils.getTodayString()) }
+
+    var showStudentPickerModal by remember { mutableStateOf(false) }
+    var studentSearchQuery by remember { mutableStateOf("") }
+
+    fun openDatePicker(initialDateStr: String, onDateSelected: (String) -> Unit) {
+        val cal = Calendar.getInstance()
+        try {
+            val parts = initialDateStr.split("-")
+            if (parts.size == 3) {
+                cal.set(Calendar.YEAR, parts[0].toInt())
+                cal.set(Calendar.MONTH, parts[1].toInt() - 1)
+                cal.set(Calendar.DAY_OF_MONTH, parts[2].toInt())
+            }
+        } catch (_: Exception) { }
+
+        DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                val formatted = String.format(Locale.US, "%04d-%02d-%02d", year, month + 1, dayOfMonth)
+                onDateSelected(formatted)
+            },
+            cal.get(Calendar.YEAR),
+            cal.get(Calendar.MONTH),
+            cal.get(Calendar.DAY_OF_MONTH)
+        ).show()
+    }
+
+    fun getMonthName(m: Int): String {
+        val months = listOf("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
+        return if (m in 1..12) months[m - 1] else "Month $m"
+    }
 
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -4448,37 +4506,40 @@ fun AdminReportsContent(
     ) {
         item {
             Text("ACADEMY ATTENDANCE REPORTS & PDF EXPORT", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-            Text("Generate official attendance PDF documents according to academy PRD rules.", fontSize = 11.sp, color = TextSecondary)
+            Text("Select a report type and configure period parameters to export official PDF documents.", fontSize = 11.sp, color = TextSecondary)
         }
 
+        // 1. REPORT TYPE SELECTION CARDS
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(
-                    "ALL_STUDENTS" to "All Students Comprehensive Report",
-                    "WEEKLY" to "Weekly Training Attendance Report",
-                    "MONTHLY" to "Monthly Attendance Summary",
-                    "YEARLY" to "Yearly Attendance Audit",
-                    "CUSTOM" to "Custom Date Range Report"
-                ).forEach { (typeKey, typeLabel) ->
+                    "DAILY" to ("Daily Attendance Report" to "Attendance records for a specific single date"),
+                    "MONTHLY" to ("Monthly Attendance Summary" to "Monthly attendance aggregation for all active students"),
+                    "YEARLY" to ("Yearly Attendance Audit" to "Comprehensive annual attendance records and percentages"),
+                    "CUSTOM" to ("Custom Date Range Report" to "Filter records for any custom date interval"),
+                    "STUDENT" to ("Individual Student Attendance Report" to "Detailed attendance history PDF for a single selected student")
+                ).forEach { (typeKey, typeData) ->
+                    val (typeTitle, typeDesc) = typeData
+                    val isSelected = selectedReportType == typeKey
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { selectedReportType = typeKey }
-                            .border(1.dp, if (selectedReportType == typeKey) BentoCoralOn else CyberBorder, RoundedCornerShape(20.dp)),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = CyberSurface)
+                            .border(1.dp, if (isSelected) BentoCoralOn else CyberBorder, RoundedCornerShape(16.dp)),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = if (isSelected) BentoCoralCard.copy(alpha = 0.2f) else CyberSurface)
                     ) {
                         Row(
-                            modifier = Modifier.padding(18.dp),
+                            modifier = Modifier.padding(16.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column {
-                                Text(typeLabel, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                                Text("Format: Official PDF Document", fontSize = 11.sp, color = TextMuted)
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(typeTitle, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (isSelected) BentoCoralOn else TextPrimary)
+                                Text(typeDesc, fontSize = 11.sp, color = TextMuted)
                             }
                             RadioButton(
-                                selected = selectedReportType == typeKey,
+                                selected = isSelected,
                                 onClick = { selectedReportType = typeKey },
                                 colors = RadioButtonDefaults.colors(selectedColor = BentoCoralOn)
                             )
@@ -4488,29 +4549,383 @@ fun AdminReportsContent(
             }
         }
 
+        // 2. CONFIGURATION PARAMETERS CARD BASED ON SELECTION
         item {
-            Spacer(modifier = Modifier.height(10.dp))
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, BentoNavy.copy(alpha = 0.3f), RoundedCornerShape(16.dp)),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = CyberSurface)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text("REPORT PARAMETERS", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = BentoNavy)
+
+                    when (selectedReportType) {
+                        "DAILY" -> {
+                            Text("Select Date for Daily Attendance:", fontSize = 12.sp, color = TextPrimary)
+                            Button(
+                                onClick = { openDatePicker(selectedDailyDate) { selectedDailyDate = it } },
+                                colors = ButtonDefaults.buttonColors(containerColor = BentoNavy),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(Icons.Default.CalendarToday, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Selected Date: $selectedDailyDate", fontSize = 12.sp, color = Color.White)
+                            }
+                        }
+
+                        "MONTHLY" -> {
+                            Text("Select Month & Year:", fontSize = 12.sp, color = TextPrimary)
+
+                            // Month chips
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                items(12) { idx ->
+                                    val mNum = idx + 1
+                                    val mName = getMonthName(mNum).take(3)
+                                    val isMSelected = selectedMonth == mNum
+                                    FilterChip(
+                                        selected = isMSelected,
+                                        onClick = { selectedMonth = mNum },
+                                        label = { Text(mName, fontSize = 11.sp) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = BentoNavy,
+                                            selectedLabelColor = Color.White
+                                        )
+                                    )
+                                }
+                            }
+
+                            // Year chips
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                val currentY = Calendar.getInstance().get(Calendar.YEAR)
+                                items(listOf(currentY - 2, currentY - 1, currentY, currentY + 1)) { yearVal ->
+                                    val isYSelected = selectedYear == yearVal
+                                    FilterChip(
+                                        selected = isYSelected,
+                                        onClick = { selectedYear = yearVal },
+                                        label = { Text("$yearVal", fontSize = 11.sp) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = BentoNavy,
+                                            selectedLabelColor = Color.White
+                                        )
+                                    )
+                                }
+                            }
+                        }
+
+                        "YEARLY" -> {
+                            Text("Select Year:", fontSize = 12.sp, color = TextPrimary)
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                val currentY = Calendar.getInstance().get(Calendar.YEAR)
+                                items(listOf(currentY - 2, currentY - 1, currentY, currentY + 1)) { yearVal ->
+                                    val isYSelected = selectedYear == yearVal
+                                    FilterChip(
+                                        selected = isYSelected,
+                                        onClick = { selectedYear = yearVal },
+                                        label = { Text("$yearVal", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = BentoNavy,
+                                            selectedLabelColor = Color.White
+                                        )
+                                    )
+                                }
+                            }
+                        }
+
+                        "CUSTOM" -> {
+                            Text("Select Custom Date Range:", fontSize = 12.sp, color = TextPrimary)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = { openDatePicker(customFromDate) { customFromDate = it } },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(containerColor = BentoNavy),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Text("From: $customFromDate", fontSize = 11.sp, color = Color.White)
+                                }
+                                Button(
+                                    onClick = { openDatePicker(customToDate) { customToDate = it } },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(containerColor = BentoNavy),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Text("To: $customToDate", fontSize = 11.sp, color = Color.White)
+                                }
+                            }
+                        }
+
+                        "STUDENT" -> {
+                            Text("Selected Student:", fontSize = 12.sp, color = TextPrimary)
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showStudentPickerModal = true }
+                                    .border(1.dp, BentoNavy.copy(alpha = 0.4f), RoundedCornerShape(12.dp)),
+                                colors = CardDefaults.cardColors(containerColor = CyberBackground)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = selectedStudent?.name ?: "Click to Select Student",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary
+                                        )
+                                        if (selectedStudent != null) {
+                                            Text(
+                                                text = "ID: ${selectedStudent?.studentId} • Mobile: ${selectedStudent?.mobile}",
+                                                fontSize = 11.sp,
+                                                color = TextSecondary
+                                            )
+                                        }
+                                    }
+                                    CyberButton(
+                                        text = "SELECT",
+                                        onClick = { showStudentPickerModal = true },
+                                        containerColor = BentoNavy,
+                                        contentColor = Color.White
+                                    )
+                                }
+                            }
+
+                            Text("Select Date Range for Student:", fontSize = 12.sp, color = TextPrimary)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = { openDatePicker(studentFromDate) { studentFromDate = it } },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(containerColor = BentoNavy),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Text("From: $studentFromDate", fontSize = 11.sp, color = Color.White)
+                                }
+                                Button(
+                                    onClick = { openDatePicker(studentToDate) { studentToDate = it } },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(containerColor = BentoNavy),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Text("To: $studentToDate", fontSize = 11.sp, color = Color.White)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. GENERATE BUTTON
+        item {
+            Spacer(modifier = Modifier.height(6.dp))
             CyberButton(
                 text = "GENERATE & DOWNLOAD PDF REPORT",
                 onClick = {
-                    val batchName = batches.firstOrNull()?.name ?: "All Batches"
-                    val groupName = groups.firstOrNull()?.name ?: "All Groups"
+                    when (selectedReportType) {
+                        "DAILY" -> {
+                            val filteredAtt = attendanceList.filter { it.date == selectedDailyDate }
+                            val bName = batches.firstOrNull()?.name ?: "All Batches"
+                            val gName = groups.firstOrNull()?.name ?: "All Groups"
+                            PdfReportGenerator.generateGroupAttendancePdf(
+                                context = context,
+                                reportTitle = "Daily Attendance Report",
+                                batchName = bName,
+                                groupName = gName,
+                                dateRangeText = selectedDailyDate,
+                                students = students,
+                                attendanceList = filteredAtt
+                            )
+                        }
 
-                    PdfReportGenerator.generateAndOpenPdfReport(
-                        context = context,
-                        reportTitle = selectedReportType.replace("_", " "),
-                        batchName = batchName,
-                        groupName = groupName,
-                        dateRangeText = "Current Session (${DateUtils.getTodayString()})",
-                        students = students,
-                        attendanceList = attendanceList
-                    )
+                        "MONTHLY" -> {
+                            val monthFormatted = String.format(Locale.US, "%02d", selectedMonth)
+                            val monthPrefix = "$selectedYear-$monthFormatted"
+                            val filteredAtt = attendanceList.filter { it.date.startsWith(monthPrefix) }
+                            val mName = getMonthName(selectedMonth)
+                            val bName = batches.firstOrNull()?.name ?: "All Batches"
+                            val gName = groups.firstOrNull()?.name ?: "All Groups"
+
+                            PdfReportGenerator.generateGroupAttendancePdf(
+                                context = context,
+                                reportTitle = "Monthly Summary ($mName $selectedYear)",
+                                batchName = bName,
+                                groupName = gName,
+                                dateRangeText = "$mName $selectedYear",
+                                students = students,
+                                attendanceList = filteredAtt
+                            )
+                        }
+
+                        "YEARLY" -> {
+                            val yearPrefix = "$selectedYear-"
+                            val filteredAtt = attendanceList.filter { it.date.startsWith(yearPrefix) }
+                            val bName = batches.firstOrNull()?.name ?: "All Batches"
+                            val gName = groups.firstOrNull()?.name ?: "All Groups"
+
+                            PdfReportGenerator.generateGroupAttendancePdf(
+                                context = context,
+                                reportTitle = "Yearly Attendance Audit ($selectedYear)",
+                                batchName = bName,
+                                groupName = gName,
+                                dateRangeText = "Year $selectedYear",
+                                students = students,
+                                attendanceList = filteredAtt
+                            )
+                        }
+
+                        "CUSTOM" -> {
+                            if (customFromDate > customToDate) {
+                                Toast.makeText(context, "From Date ($customFromDate) cannot be after To Date ($customToDate)", Toast.LENGTH_LONG).show()
+                                return@CyberButton
+                            }
+                            val filteredAtt = attendanceList.filter { it.date >= customFromDate && it.date <= customToDate }
+                            val bName = batches.firstOrNull()?.name ?: "All Batches"
+                            val gName = groups.firstOrNull()?.name ?: "All Groups"
+
+                            PdfReportGenerator.generateGroupAttendancePdf(
+                                context = context,
+                                reportTitle = "Custom Date Range Report",
+                                batchName = bName,
+                                groupName = gName,
+                                dateRangeText = "$customFromDate to $customToDate",
+                                students = students,
+                                attendanceList = filteredAtt
+                            )
+                        }
+
+                        "STUDENT" -> {
+                            val st = selectedStudent
+                            if (st == null) {
+                                Toast.makeText(context, "Please select a student first!", Toast.LENGTH_SHORT).show()
+                                return@CyberButton
+                            }
+                            if (studentFromDate > studentToDate) {
+                                Toast.makeText(context, "From Date ($studentFromDate) cannot be after To Date ($studentToDate)", Toast.LENGTH_LONG).show()
+                                return@CyberButton
+                            }
+                            val filteredAtt = attendanceList.filter {
+                                (it.studentId == st.studentId || it.studentUid == st.uid) && it.date >= studentFromDate && it.date <= studentToDate
+                            }
+                            val bName = batches.find { it.batchId == st.batchId }?.name ?: "All Batches"
+                            val gName = groups.find { it.groupId == st.groupId }?.name ?: "Unassigned"
+
+                            PdfReportGenerator.generateIndividualStudentPdf(
+                                context = context,
+                                student = st,
+                                batchName = bName,
+                                groupName = gName,
+                                fromDate = studentFromDate,
+                                toDate = studentToDate,
+                                attendanceList = filteredAtt
+                            )
+                        }
+                    }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 icon = Icons.Default.PictureAsPdf,
                 containerColor = BentoCoralOn,
                 contentColor = Color.White
             )
+        }
+    }
+
+    // STUDENT SELECTION MODAL
+    if (showStudentPickerModal) {
+        Dialog(onDismissRequest = { showStudentPickerModal = false }) {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = CyberSurface,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.85f)
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Select Student for Report", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        IconButton(onClick = { showStudentPickerModal = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = TextPrimary)
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = studentSearchQuery,
+                        onValueChange = { studentSearchQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Search by name, ID or mobile...", fontSize = 12.sp) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextMuted) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = BentoNavy,
+                            unfocusedBorderColor = CyberBorder
+                        )
+                    )
+
+                    val filteredStudents = students.filter {
+                        it.name.contains(studentSearchQuery, ignoreCase = true) ||
+                        it.studentId.contains(studentSearchQuery, ignoreCase = true) ||
+                        it.mobile.contains(studentSearchQuery, ignoreCase = true)
+                    }
+
+                    if (filteredStudents.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("No students found.", fontSize = 13.sp, color = TextMuted)
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(filteredStudents) { student ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            selectedStudent = student
+                                            showStudentPickerModal = false
+                                        }
+                                        .border(1.dp, CyberBorder, RoundedCornerShape(12.dp)),
+                                    colors = CardDefaults.cardColors(containerColor = CyberBackground)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(student.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                            Text("ID: ${student.studentId} • Mobile: ${student.mobile}", fontSize = 11.sp, color = TextSecondary)
+                                            Text("Target: ${student.targetExam}", fontSize = 10.sp, color = TextMuted)
+                                        }
+                                        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = BentoNavy)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

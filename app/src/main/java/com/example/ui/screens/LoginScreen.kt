@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -70,6 +71,24 @@ fun LoginScreen(authViewModel: AuthViewModel) {
             .padding(20.dp),
         contentAlignment = Alignment.Center
     ) {
+        val context = LocalContext.current
+        IconButton(
+            onClick = { ThemeManager.toggleTheme(context) },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .size(42.dp)
+                .clip(CircleShape)
+                .background(CyberSurface)
+                .border(1.dp, CyberBorder, CircleShape)
+        ) {
+            Icon(
+                imageVector = if (ThemeManager.isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
+                contentDescription = "Toggle Theme",
+                tint = if (ThemeManager.isDarkMode) Color(0xFFFDE047) else BentoNavy,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
