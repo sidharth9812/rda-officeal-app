@@ -4196,7 +4196,12 @@ fun AdminAttendanceContent(
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(student.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                                Text("ID: ${student.studentId} • Group: ${groupObj?.name ?: "Unassigned"}", fontSize = 11.sp, color = TextSecondary)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("ID: ${student.studentId} • Group: ${groupObj?.name ?: "Unassigned"}", fontSize = 11.sp, color = TextSecondary)
+                                    if (currentStatus == null) {
+                                        Text(" • Not Marked", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BentoCoralOn)
+                                    }
+                                }
                             }
                         }
 

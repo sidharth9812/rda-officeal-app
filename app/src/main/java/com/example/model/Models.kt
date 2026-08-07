@@ -156,6 +156,7 @@ data class DeveloperInfo(
     val name: String = "Sidharth Malviya",
     val photoUrl: String = "", // Cloudinary HTTPS URL
     val roleTitle: String = "App Developer & Technical Lead",
+    val phone: String = "7441197419",
     val updatedAt: Long = System.currentTimeMillis()
 )
 

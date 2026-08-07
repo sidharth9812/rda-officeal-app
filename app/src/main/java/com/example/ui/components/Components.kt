@@ -1,5 +1,7 @@
 package com.example.ui.components
 
+import android.content.Intent
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.widget.Toast
@@ -1014,6 +1016,9 @@ fun DeveloperCard(
     modifier: Modifier = Modifier,
     onEditClick: (() -> Unit)? = null
 ) {
+    val context = LocalContext.current
+    val phone = developerInfo.phone.ifBlank { "7441197419" }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -1033,7 +1038,7 @@ fun DeveloperCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "DEVELOPER",
+                    text = "DEVELOPER & SUPPORT",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     color = BentoNavy,
@@ -1054,14 +1059,15 @@ fun DeveloperCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
+            // Larger Profile Picture Size (110.dp)
             Box(
                 modifier = Modifier
-                    .size(76.dp)
+                    .size(110.dp)
                     .clip(CircleShape)
                     .background(CyberSurfaceVariant)
-                    .border(2.5.dp, BentoNavy, CircleShape),
+                    .border(3.dp, BentoNavy, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 val photoModel: Any = if (developerInfo.photoUrl.startsWith("http://") || developerInfo.photoUrl.startsWith("https://") || developerInfo.photoUrl.startsWith("content://") || developerInfo.photoUrl.startsWith("file://")) {
@@ -1083,17 +1089,106 @@ fun DeveloperCard(
 
             Text(
                 text = developerInfo.name.ifBlank { "Sidharth Malviya" },
-                fontSize = 15.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
             )
 
             Text(
                 text = developerInfo.roleTitle.ifBlank { "App Developer & Technical Lead" },
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 color = TextSecondary
             )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Phone,
+                    contentDescription = "Phone",
+                    tint = BentoNavy,
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "+91 $phone",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = BentoNavy
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Action Buttons: Call, WhatsApp & Share APK
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = {
+                        try {
+                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Call action unavailable", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Icon(Icons.Default.Phone, contentDescription = "Call", modifier = Modifier.size(14.dp), tint = BentoNavy)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Call", fontSize = 11.sp, color = BentoNavy, fontWeight = FontWeight.Bold)
+                }
+
+                Button(
+                    onClick = {
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?phone=91$phone&text=Hello%20Developer%20Sidharth"))
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "WhatsApp unavailable", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Icon(Icons.Default.Share, contentDescription = "WhatsApp", modifier = Modifier.size(14.dp), tint = Color.White)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Chat", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                }
+
+                Button(
+                    onClick = {
+                        try {
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_SUBJECT, "RDA Physical Academy App")
+                                putExtra(
+                                    Intent.EXTRA_TEXT,
+                                    "📱 *RDA Physical Academy Official App*\n\nGet attendance, physical tests, batch status & certificates!\n\nDeveloper: ${developerInfo.name}\nContact: +91 $phone\n\nDownload App / APK:\nhttps://github.com/sidharth9812/rda-officeal-app/releases/latest"
+                                )
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "Share RDA Physical Academy App"))
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Sharing failed", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.weight(1.2f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = BentoNavy),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Icon(Icons.Default.Share, contentDescription = "Share APK", modifier = Modifier.size(14.dp), tint = Color.White)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Share APK", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }
@@ -1109,6 +1204,7 @@ fun AdminEditDeveloperDialog(
 
     var name by remember { mutableStateOf(currentInfo.name.ifBlank { "Sidharth Malviya" }) }
     var roleTitle by remember { mutableStateOf(currentInfo.roleTitle.ifBlank { "App Developer & Technical Lead" }) }
+    var phone by remember { mutableStateOf(currentInfo.phone.ifBlank { "7441197419" }) }
     var photoUrl by remember { mutableStateOf(currentInfo.photoUrl) }
     var isUploading by remember { mutableStateOf(false) }
     var uploadProgress by remember { mutableStateOf(0f) }
@@ -1145,12 +1241,13 @@ fun AdminEditDeveloperDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxWidth()
             ) {
+                // Larger profile picture edit preview (110.dp)
                 Box(
                     modifier = Modifier
-                        .size(90.dp)
+                        .size(110.dp)
                         .clip(CircleShape)
                         .background(CyberSurfaceVariant)
-                        .border(2.dp, BentoNavy, CircleShape)
+                        .border(3.dp, BentoNavy, CircleShape)
                         .clickable { if (!isUploading) photoPickerLauncher.launch("image/*") },
                     contentAlignment = Alignment.Center
                 ) {
@@ -1201,6 +1298,14 @@ fun AdminEditDeveloperDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = { phone = it },
+                    label = { Text("Contact Phone / WhatsApp") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         },
         confirmButton = {
@@ -1213,7 +1318,8 @@ fun AdminEditDeveloperDialog(
                     val info = DeveloperInfo(
                         name = name.trim(),
                         photoUrl = photoUrl,
-                        roleTitle = roleTitle.trim()
+                        roleTitle = roleTitle.trim(),
+                        phone = phone.trim().ifBlank { "7441197419" }
                     )
                     repository.updateDeveloperInfo(info) { success, err ->
                         if (success) {

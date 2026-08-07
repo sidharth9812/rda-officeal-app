@@ -235,6 +235,16 @@ class AcademyRepository(private val context: Context? = null) {
             initialBatches.forEach { fs.collection("batches").document(it.batchId).set(it) }
             initialGroups.forEach { fs.collection("groups").document(it.groupId).set(it) }
             initialNotices.forEach { fs.collection("notices").document(it.noticeId).set(it) }
+
+            val devInfo = _developerInfo.value
+            val devMap = mapOf(
+                "name" to devInfo.name.ifBlank { "Sidharth Malviya" },
+                "photoUrl" to devInfo.photoUrl,
+                "roleTitle" to devInfo.roleTitle.ifBlank { "App Developer & Technical Lead" },
+                "phone" to devInfo.phone.ifBlank { "7441197419" },
+                "updatedAt" to System.currentTimeMillis()
+            )
+            fs.collection("settings").document("developer_info").set(devMap, com.google.firebase.firestore.SetOptions.merge())
         }
     }
 
@@ -313,11 +323,14 @@ class AcademyRepository(private val context: Context? = null) {
 
             fs.collection("settings").document("developer_info").addSnapshotListener { snapshot, error ->
                 if (error == null && snapshot != null && snapshot.exists()) {
-                    val name = snapshot.getString("name") ?: "Sidharth Malviya"
-                    val photoUrl = snapshot.getString("photoUrl") ?: ""
-                    val roleTitle = snapshot.getString("roleTitle") ?: "App Developer & Technical Lead"
+                    val current = _developerInfo.value
+                    val name = snapshot.getString("name")?.ifBlank { null } ?: current.name.ifBlank { "Sidharth Malviya" }
+                    val photoUrlStr = snapshot.getString("photoUrl")
+                    val photoUrl = if (!photoUrlStr.isNullOrBlank()) photoUrlStr else current.photoUrl
+                    val roleTitle = snapshot.getString("roleTitle")?.ifBlank { null } ?: current.roleTitle.ifBlank { "App Developer & Technical Lead" }
+                    val phone = snapshot.getString("phone")?.ifBlank { null } ?: current.phone.ifBlank { "7441197419" }
                     val updatedAt = snapshot.getLong("updatedAt") ?: System.currentTimeMillis()
-                    _developerInfo.value = DeveloperInfo(name, photoUrl, roleTitle, updatedAt)
+                    _developerInfo.value = DeveloperInfo(name, photoUrl, roleTitle, phone, updatedAt)
                     saveDevInfoCache()
                 }
             }
@@ -1052,10 +1065,12 @@ class AcademyRepository(private val context: Context? = null) {
 
     fun updateDeveloperInfo(info: DeveloperInfo, onComplete: (Boolean, String?) -> Unit = { _, _ -> }) {
         _developerInfo.value = info
+        saveDevInfoCache()
         val map = mapOf(
             "name" to info.name,
             "photoUrl" to info.photoUrl,
             "roleTitle" to info.roleTitle,
+            "phone" to info.phone,
             "updatedAt" to System.currentTimeMillis()
         )
         firestore?.collection("settings")?.document("developer_info")

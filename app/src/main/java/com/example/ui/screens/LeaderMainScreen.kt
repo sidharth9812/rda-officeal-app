@@ -353,7 +353,9 @@ fun LeaderAttendanceContent(
         attendanceMap.clear()
         groupStudents.forEach { student ->
             val record = attendanceList.find { it.studentId == student.studentId && it.date == selectedDate }
-            attendanceMap[student.studentId] = record?.status ?: AttendanceStatus.PRESENT
+            if (record != null) {
+                attendanceMap[student.studentId] = record.status
+            }
         }
     }
 
@@ -441,14 +443,28 @@ fun LeaderAttendanceContent(
             item { EmptyStateCard("No students in assigned group to mark attendance.") }
         } else {
             items(groupStudents) { student ->
-                val status = attendanceMap[student.studentId] ?: AttendanceStatus.PRESENT
+                val status = attendanceMap[student.studentId]
 
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(1.dp, CyberBorder, RoundedCornerShape(20.dp)),
+                        .border(
+                            1.dp,
+                            when (status) {
+                                AttendanceStatus.PRESENT -> BentoMintOn.copy(alpha = 0.5f)
+                                AttendanceStatus.ABSENT -> BentoCoralOn.copy(alpha = 0.5f)
+                                else -> CyberBorder
+                            },
+                            RoundedCornerShape(20.dp)
+                        ),
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = CyberSurface)
+                    colors = CardDefaults.cardColors(
+                        containerColor = when (status) {
+                            AttendanceStatus.PRESENT -> BentoMintCard.copy(alpha = 0.3f)
+                            AttendanceStatus.ABSENT -> BentoCoralCard.copy(alpha = 0.3f)
+                            else -> CyberSurface
+                        }
+                    )
                 ) {
                     Row(
                         modifier = Modifier
@@ -459,7 +475,13 @@ fun LeaderAttendanceContent(
                     ) {
                         Column {
                             Text(student.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                            Text("ID: ${student.studentId}", fontSize = 11.sp, color = TextMuted)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("ID: ${student.studentId}", fontSize = 11.sp, color = TextMuted)
+                                if (status == null) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("• Not Marked", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = BentoCoralOn)
+                                }
+                            }
                         }
 
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -496,6 +518,10 @@ fun LeaderAttendanceContent(
                 CyberButton(
                     text = "SAVE & SYNCHRONIZE ATTENDANCE",
                     onClick = {
+                        if (attendanceMap.isEmpty()) {
+                            Toast.makeText(context, "Please mark attendance (P or A) for at least one student before saving.", Toast.LENGTH_SHORT).show()
+                            return@CyberButton
+                        }
                         if (assignedGroup != null && assignedBatch != null) {
                             repository.saveAttendanceBatch(
                                 date = selectedDate,
