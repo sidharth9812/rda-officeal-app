@@ -127,38 +127,56 @@ fun CyberHeaderCard(
                 Spacer(modifier = Modifier.width(8.dp))
 
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val context = LocalContext.current
-                    IconButton(
-                        onClick = { ThemeManager.toggleTheme(context) },
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(CyberSurfaceVariant)
-                    ) {
-                        Icon(
-                            imageVector = if (ThemeManager.isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
-                            contentDescription = "Toggle Theme",
-                            tint = if (ThemeManager.isDarkMode) Color(0xFFFDE047) else BentoNavy,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+                        Surface(
+                            onClick = { ThemeManager.toggleTheme(context) },
+                            shape = CircleShape,
+                            color = if (ThemeManager.isDarkMode) Color(0xFF1E293B) else Color(0xFFF1F5F9),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (ThemeManager.isDarkMode) Color(0xFF334155) else Color(0xFFCBD5E1)
+                            ),
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                Icon(
+                                    imageVector = if (ThemeManager.isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
+                                    contentDescription = "Toggle Theme",
+                                    tint = if (ThemeManager.isDarkMode) Color(0xFFFDE047) else BentoNavy,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
 
-                    IconButton(
-                        onClick = onLogoutClick,
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(CyberSurfaceVariant)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Logout,
-                            contentDescription = "Logout",
-                            tint = TextSecondary,
-                            modifier = Modifier.size(18.dp)
-                        )
+                        Surface(
+                            onClick = onLogoutClick,
+                            shape = CircleShape,
+                            color = if (ThemeManager.isDarkMode) Color(0xFF311313) else Color(0xFFFEE2E2),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (ThemeManager.isDarkMode) Color(0xFF7F1D1D) else Color(0xFFFCA5A5)
+                            ),
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Logout,
+                                    contentDescription = "Logout",
+                                    tint = if (ThemeManager.isDarkMode) Color(0xFFFCA5A5) else Color(0xFF991B1B),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
