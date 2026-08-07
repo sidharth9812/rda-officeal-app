@@ -229,6 +229,13 @@ class AcademyRepository(private val context: Context? = null) {
         _students.value = initialStudents
         _attendance.value = initialAttendance
         _notices.value = initialNotices
+
+        // Seed initial data to Firestore if connected
+        firestore?.let { fs ->
+            initialBatches.forEach { fs.collection("batches").document(it.batchId).set(it) }
+            initialGroups.forEach { fs.collection("groups").document(it.groupId).set(it) }
+            initialNotices.forEach { fs.collection("notices").document(it.noticeId).set(it) }
+        }
     }
 
     private fun setupFirestoreListeners() {
@@ -243,95 +250,64 @@ class AcademyRepository(private val context: Context? = null) {
                 _isOffline.value = false
                 if (snapshot != null) {
                     val list = snapshot.documents.mapNotNull { it.toObject(Batch::class.java) }
-                    if (list.isNotEmpty()) {
-                        _batches.value = list
-                        saveBatchesCache()
-                    }
+                    _batches.value = list
+                    saveBatchesCache()
                 }
             }
 
             fs.collection("groups").addSnapshotListener { snapshot, error ->
                 if (error == null && snapshot != null) {
                     val list = snapshot.documents.mapNotNull { it.toObject(Group::class.java) }
-                    if (list.isNotEmpty()) {
-                        _groups.value = list
-                        saveGroupsCache()
-                    }
+                    _groups.value = list
+                    saveGroupsCache()
                 }
             }
 
             fs.collection("students").addSnapshotListener { snapshot, error ->
                 if (error == null && snapshot != null) {
                     val list = snapshot.documents.mapNotNull { it.toObject(Student::class.java) }
-                    if (list.isNotEmpty()) {
-                        val fsKeys = list.map { if (it.studentId.isNotBlank()) it.studentId else it.uid }.toSet()
-                        val merged = list.toMutableList()
-                        _students.value.forEach { local ->
-                            val key = if (local.studentId.isNotBlank()) local.studentId else local.uid
-                            if (key.isNotBlank() && !fsKeys.contains(key)) {
-                                merged.add(local)
-                            }
-                        }
-                        _students.value = merged
-                        saveStudentsCache()
-                    }
+                    _students.value = list
+                    saveStudentsCache()
                 }
             }
 
             fs.collection("attendance").addSnapshotListener { snapshot, error ->
                 if (error == null && snapshot != null) {
                     val list = snapshot.documents.mapNotNull { it.toObject(AttendanceRecord::class.java) }
-                    if (list.isNotEmpty()) {
-                        val fsKeys = list.map { it.attendanceId }.toSet()
-                        val merged = list.toMutableList()
-                        _attendance.value.forEach { local ->
-                            if (local.attendanceId.isNotBlank() && !fsKeys.contains(local.attendanceId)) {
-                                merged.add(local)
-                            }
-                        }
-                        _attendance.value = merged
-                        saveAttendanceCache()
-                    }
+                    _attendance.value = list
+                    saveAttendanceCache()
                 }
             }
 
             fs.collection("notices").addSnapshotListener { snapshot, error ->
                 if (error == null && snapshot != null) {
                     val list = snapshot.documents.mapNotNull { it.toObject(Notice::class.java) }
-                    if (list.isNotEmpty()) {
-                        _notices.value = list
-                        saveNoticesCache()
-                    }
+                    _notices.value = list
+                    saveNoticesCache()
                 }
             }
 
             fs.collection("certificates").addSnapshotListener { snapshot, error ->
                 if (error == null && snapshot != null) {
                     val list = snapshot.documents.mapNotNull { it.toObject(Certificate::class.java) }
-                    if (list.isNotEmpty()) {
-                        _certificates.value = list
-                        saveCertificatesCache()
-                    }
+                    _certificates.value = list
+                    saveCertificatesCache()
                 }
             }
 
             fs.collection("gallery").addSnapshotListener { snapshot, error ->
                 if (error == null && snapshot != null) {
                     val list = snapshot.documents.mapNotNull { it.toObject(GalleryItem::class.java) }
-                    if (list.isNotEmpty()) {
-                        _gallery.value = list
-                        saveGalleryCache()
-                    }
+                    _gallery.value = list
+                    saveGalleryCache()
                 }
             }
 
             fs.collection("achievements").addSnapshotListener { snapshot, error ->
                 if (error == null && snapshot != null) {
                     val list = snapshot.documents.mapNotNull { it.toObject(AchievementItem::class.java) }
-                    if (list.isNotEmpty()) {
-                        _achievements.value = list
-                        saveAchievementsCache()
-                    }
+                    _achievements.value = list
+                    saveAchievementsCache()
                 }
             }
 
@@ -361,17 +337,8 @@ class AcademyRepository(private val context: Context? = null) {
                             null
                         }
                     }
-                    if (list.isNotEmpty()) {
-                        val fsUids = list.map { it.uid }.toSet()
-                        val merged = list.toMutableList()
-                        _users.value.forEach { local ->
-                            if (local.uid.isNotBlank() && !fsUids.contains(local.uid)) {
-                                merged.add(local)
-                            }
-                        }
-                        _users.value = merged
-                        saveUsersCache()
-                    }
+                    _users.value = list
+                    saveUsersCache()
                 }
             }
 

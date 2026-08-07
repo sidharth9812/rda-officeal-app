@@ -66,28 +66,8 @@ class MainActivity : ComponentActivity() {
 fun RDAAcademyApp(
     authViewModel: AuthViewModel = viewModel()
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     var isSplashFinished by remember { mutableStateOf(false) }
     val authState by authViewModel.authState.collectAsState()
-
-    // GitHub Auto Update Manager & Firestore Realtime Push Updates
-    val updateManager = remember { GitHubUpdateManager(context) }
-    val updateState by updateManager.updateState.collectAsState()
-    val appUpdateConfig by authViewModel.repository.appUpdateConfig.collectAsState()
-
-    LaunchedEffect(Unit) {
-        // Automatically check for GitHub release updates on app start
-        scope.launch {
-            updateManager.checkForUpdates(silent = true)
-        }
-    }
-
-    LaunchedEffect(appUpdateConfig) {
-        appUpdateConfig?.let { config ->
-            updateManager.triggerFirestoreUpdate(config)
-        }
-    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (!isSplashFinished) {
@@ -155,13 +135,6 @@ fun RDAAcademyApp(
                 }
             }
         }
-
-        // Global Update Dialog overlay
-        UpdateDialog(
-            updateState = updateState,
-            updateManager = updateManager,
-            onDismiss = { updateManager.dismissUpdate() }
-        )
     }
 }
 

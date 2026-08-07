@@ -43,7 +43,8 @@ fun UpdateDialog(
     updateManager: GitHubUpdateManager,
     onDismiss: () -> Unit
 ) {
-    if (updateState is UpdateState.Idle || updateState is UpdateState.UpToDate) return
+    // In-app update dialog disabled per user request
+    if (true) return
 
     val scope = rememberCoroutineScope()
     val context = LocalContext.current

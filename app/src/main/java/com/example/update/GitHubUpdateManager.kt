@@ -75,96 +75,7 @@ class GitHubUpdateManager(private val context: Context) {
     }
 
     suspend fun checkForUpdates(silent: Boolean = false) {
-        withContext(Dispatchers.IO) {
-            try {
-                if (!silent) {
-                    _updateState.value = UpdateState.Checking
-                }
-
-                val request = Request.Builder()
-                    .url(GITHUB_API_URL)
-                    .header("Accept", "application/vnd.github+json")
-                    .header("User-Agent", "RDA-App-Android")
-                    .build()
-
-                val response = client.newCall(request).execute()
-                if (!response.isSuccessful) {
-                    Log.w(TAG, "GitHub API status ${response.code}")
-                    if (!silent) {
-                        _updateState.value = UpdateState.UpToDate
-                    }
-                    return@withContext
-                }
-
-                val jsonStr = response.body?.string() ?: ""
-                if (jsonStr.isBlank()) {
-                    if (!silent) _updateState.value = UpdateState.UpToDate
-                    return@withContext
-                }
-
-                val json = JSONObject(jsonStr)
-                val tagName = json.optString("tag_name", "").trim()
-                val name = json.optString("name", "New RDA Release").ifBlank { "New RDA Release" }
-                val body = json.optString("body", "Bug fixes and performance improvements.").ifBlank { "Bug fixes and performance improvements." }
-                val publishedAt = json.optString("published_at", "")
-
-                // Find APK asset in assets array
-                var apkUrl = ""
-                var apkSizeBytes = 0L
-                val assets = json.optJSONArray("assets")
-                if (assets != null) {
-                    for (i in 0 until assets.length()) {
-                        val asset = assets.getJSONObject(i)
-                        val downloadUrl = asset.optString("browser_download_url", "")
-                        val assetName = asset.optString("name", "")
-                        if (assetName.endsWith(".apk") || downloadUrl.endsWith(".apk") || assetName.contains("app-") || downloadUrl.contains(".apk")) {
-                            apkUrl = downloadUrl
-                            apkSizeBytes = asset.optLong("size", 0L)
-                            break
-                        }
-                    }
-                }
-
-                val cleanTag = tagName.removePrefix("v").removePrefix("V")
-                if (apkUrl.isBlank() && tagName.isNotBlank()) {
-                    apkUrl = "https://github.com/sidharth9812/rda-officeal-app/releases/download/$tagName/app-release.apk"
-                }
-
-                val currentVersion = BuildConfig.VERSION_NAME
-
-                if (isNewerVersion(currentVersion, tagName)) {
-                    if (silent && isVersionDismissed(tagName)) {
-                        Log.d(TAG, "Update $tagName was previously dismissed by user. Suppressing notification.")
-                        return@withContext
-                    }
-
-                    val sizeMbStr = if (apkSizeBytes > 0) {
-                        String.format("%.1f MB", apkSizeBytes / (1024.0 * 1024.0))
-                    } else {
-                        "Approx 15 MB"
-                    }
-
-                    val releaseInfo = GitHubReleaseInfo(
-                        version = if (tagName.startsWith("v", ignoreCase = true)) tagName else "v$tagName",
-                        releaseName = name,
-                        body = body,
-                        downloadUrl = apkUrl,
-                        apkSizeFormatted = sizeMbStr,
-                        publishedAt = publishedAt
-                    )
-                    _updateState.value = UpdateState.UpdateAvailable(releaseInfo)
-                } else {
-                    if (!silent) {
-                        _updateState.value = UpdateState.UpToDate
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Check update error: ${e.message}", e)
-                if (!silent) {
-                    _updateState.value = UpdateState.Error(e.localizedMessage ?: "Failed to check updates")
-                }
-            }
-        }
+        _updateState.value = UpdateState.Idle
     }
 
     private fun isNewerVersion(currentVersion: String, latestTag: String): Boolean {
@@ -477,26 +388,7 @@ class GitHubUpdateManager(private val context: Context) {
     }
 
     fun triggerFirestoreUpdate(config: com.example.model.AppUpdateConfig) {
-        if (!config.active) return
-        val currentVersion = BuildConfig.VERSION_NAME
-        val currentCode = BuildConfig.VERSION_CODE
-        val isNewer = config.versionCode > currentCode || isNewerVersion(currentVersion, config.versionName)
-        if (isNewer || config.isMandatory) {
-            if (!config.isMandatory && isVersionDismissed(config.versionName)) {
-                Log.d(TAG, "Firestore update ${config.versionName} previously dismissed by user. Suppressing dialog.")
-                return
-            }
-
-            val releaseInfo = GitHubReleaseInfo(
-                version = "v${config.versionName.removePrefix("v")}",
-                releaseName = config.title,
-                body = config.releaseNotes,
-                downloadUrl = config.downloadUrl.ifBlank { "https://github.com/sidharth9812/rda-officeal-app" },
-                apkSizeFormatted = "Direct Update Push",
-                publishedAt = ""
-            )
-            _updateState.value = UpdateState.UpdateAvailable(releaseInfo)
-        }
+        _updateState.value = UpdateState.Idle
     }
 }
 
