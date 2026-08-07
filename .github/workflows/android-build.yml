@@ -34,13 +34,13 @@ jobs:
       - name: Verify Gradle Version
         run: gradle --version
 
-        - name: Restore Permanent Signing Keystore
-    env:
-      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-    run: |
-      printf '%s' "$KEYSTORE_BASE64" | base64 --decode > app/my-rda-release-key.jks
-      test -s app/my-rda-release-key.jks
-      chmod 600 app/my-rda-release-key.jks
+      - name: Restore Permanent Signing Keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > app/my-rda-release-key.jks
+          test -s app/my-rda-release-key.jks
+          chmod 600 app/my-rda-release-key.jks
 
       - name: Verify Signing Keystore
         env:
