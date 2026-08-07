@@ -44,6 +44,7 @@ sealed class UpdateState {
 
 class GitHubUpdateManager(private val context: Context) {
 
+    private val prefs = context.getSharedPreferences("app_update_prefs", Context.MODE_PRIVATE)
     private val _updateState = MutableStateFlow<UpdateState>(UpdateState.Idle)
     val updateState: StateFlow<UpdateState> = _updateState.asStateFlow()
 
@@ -57,6 +58,20 @@ class GitHubUpdateManager(private val context: Context) {
     companion object {
         private const val GITHUB_API_URL = "https://api.github.com/repos/sidharth9812/rda-officeal-app/releases/latest"
         private const val TAG = "GitHubUpdateManager"
+        private const val PREF_DISMISSED_VERSION = "dismissed_version"
+    }
+
+    private fun isVersionDismissed(version: String): Boolean {
+        val cleanTarget = version.replace("v", "").replace("V", "").trim()
+        val dismissed = prefs.getString(PREF_DISMISSED_VERSION, null) ?: return false
+        val cleanDismissed = dismissed.replace("v", "").replace("V", "").trim()
+        return cleanDismissed.equals(cleanTarget, ignoreCase = true)
+    }
+
+    private fun markVersionAsDismissed(version: String) {
+        val cleanTarget = version.replace("v", "").replace("V", "").trim()
+        prefs.edit().putString(PREF_DISMISSED_VERSION, cleanTarget).apply()
+        Log.d(TAG, "Marked version $cleanTarget as dismissed")
     }
 
     suspend fun checkForUpdates(silent: Boolean = false) {
@@ -118,6 +133,11 @@ class GitHubUpdateManager(private val context: Context) {
                 val currentVersion = BuildConfig.VERSION_NAME
 
                 if (isNewerVersion(currentVersion, tagName)) {
+                    if (silent && isVersionDismissed(tagName)) {
+                        Log.d(TAG, "Update $tagName was previously dismissed by user. Suppressing notification.")
+                        return@withContext
+                    }
+
                     val sizeMbStr = if (apkSizeBytes > 0) {
                         String.format("%.1f MB", apkSizeBytes / (1024.0 * 1024.0))
                     } else {
@@ -225,9 +245,20 @@ class GitHubUpdateManager(private val context: Context) {
                 _updateState.value = UpdateState.Downloading(0, "0 MB", release.apkSizeFormatted)
 
                 val candidates = getCandidateUrls(release)
-                val updateDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+                val publicDownloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                val appDownloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
                     ?: context.getExternalCacheDir()
                     ?: File(context.filesDir, "updates")
+
+                val updateDir = try {
+                    if (publicDownloadDir != null && (publicDownloadDir.exists() || publicDownloadDir.mkdirs())) {
+                        publicDownloadDir
+                    } else {
+                        appDownloadDir
+                    }
+                } catch (_: Exception) {
+                    appDownloadDir
+                }
                 updateDir.mkdirs()
                 val apkFile = File(updateDir, "rda_update.apk")
 
@@ -412,7 +443,36 @@ class GitHubUpdateManager(private val context: Context) {
         }
     }
 
+    fun uninstallApp() {
+        try {
+            val intent = Intent(Intent.ACTION_DELETE).apply {
+                data = Uri.parse("package:${context.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to launch uninstaller: ${e.message}", e)
+            openAppSettings()
+        }
+    }
+
+    fun openAppSettings() {
+        try {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.parse("package:${context.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to open app settings: ${e.message}")
+        }
+    }
+
     fun dismissUpdate() {
+        val currentState = _updateState.value
+        if (currentState is UpdateState.UpdateAvailable) {
+            markVersionAsDismissed(currentState.release.version)
+        }
         _updateState.value = UpdateState.Idle
     }
 
@@ -422,8 +482,13 @@ class GitHubUpdateManager(private val context: Context) {
         val currentCode = BuildConfig.VERSION_CODE
         val isNewer = config.versionCode > currentCode || isNewerVersion(currentVersion, config.versionName)
         if (isNewer || config.isMandatory) {
+            if (!config.isMandatory && isVersionDismissed(config.versionName)) {
+                Log.d(TAG, "Firestore update ${config.versionName} previously dismissed by user. Suppressing dialog.")
+                return
+            }
+
             val releaseInfo = GitHubReleaseInfo(
-                version = "v${config.versionName}",
+                version = "v${config.versionName.removePrefix("v")}",
                 releaseName = config.title,
                 body = config.releaseNotes,
                 downloadUrl = config.downloadUrl.ifBlank { "https://github.com/sidharth9812/rda-officeal-app" },
