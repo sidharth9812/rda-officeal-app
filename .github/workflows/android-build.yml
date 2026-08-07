@@ -44,9 +44,10 @@ jobs:
 
       - name: Verify Signing Keystore
         env:
-          KEYSTORE_PATH: app/my-rda-release-key.jks
+          KEYSTORE_PATH: my-rda-release-key.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        working-directory: app
         run: |
           keytool -list \
             -keystore "$KEYSTORE_PATH" \
@@ -55,10 +56,11 @@ jobs:
 
       - name: Build Release APK
         env:
-          KEYSTORE_PATH: app/my-rda-release-key.jks
+          KEYSTORE_PATH: my-rda-release-key.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        working-directory: app
         run: |
           gradle clean assembleRelease
 
@@ -69,6 +71,9 @@ jobs:
 
           echo "APK: $APK"
           echo "Apksigner: $APKSIGNER"
+
+          test -n "$APK"
+          test -n "$APKSIGNER"
 
           "$APKSIGNER" verify --verbose --print-certs "$APK"
 
